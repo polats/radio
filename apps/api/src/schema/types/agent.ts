@@ -17,3 +17,28 @@ builder.objectType(AgentType, {
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
   }),
 })
+
+// Auth payload type
+export const AuthPayloadType = builder.objectRef<{ token: string; agent: Agent }>('AuthPayload')
+
+builder.objectType(AuthPayloadType, {
+  description: 'Returned after successful registration or authentication',
+  fields: (t) => ({
+    token: t.exposeString('token'),
+    agent: t.field({
+      type: AgentRef,
+      resolve: (payload) => payload.agent,
+    }),
+  }),
+})
+
+// Nonce payload type
+export const NoncePayloadType = builder.objectRef<{ nonce: string; message: string }>('NoncePayload')
+
+builder.objectType(NoncePayloadType, {
+  description: 'Nonce and message to sign for authentication',
+  fields: (t) => ({
+    nonce: t.exposeString('nonce'),
+    message: t.exposeString('message'),
+  }),
+})
