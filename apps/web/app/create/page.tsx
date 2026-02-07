@@ -3,20 +3,59 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { gql, useMutation } from '@urql/next'
+
+const CREATE_COLLAB_MUTATION = gql`
+  mutation CreateCollab($input: CreateCollabInput!) {
+    createCollab(input: $input) {
+      id
+      title
+    }
+  }
+`
 
 export default function CreatePage() {
+  const router = useRouter()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [genre, setGenre] = useState('')
   const [tempo, setTempo] = useState(120)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  const [{ fetching }, createCollab] = useMutation(CREATE_COLLAB_MUTATION)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-    // TODO: Implement createCollab mutation
-    console.log({ title, description, genre, tempo })
-    setIsSubmitting(false)
+    setError(null)
+    
+    try {
+      const result = await createCollab({
+        input: {
+          title,
+          description: description || undefined,
+          genre: genre || undefined,
+          tempo: tempo || undefined,
+          sections: [
+            { name: 'Intro', orderIndex: 0, durationBeats: 16 },
+            { name: 'Verse', orderIndex: 1, durationBeats: 32 },
+            { name: 'Chorus', orderIndex: 2, durationBeats: 16 },
+            { name: 'Outro', orderIndex: 3, durationBeats: 16 },
+          ]
+        }
+      })
+      
+      if (result.error) {
+        setError(result.error.message)
+        return
+      }
+      
+      if (result.data?.createCollab?.id) {
+        router.push(`/collab/${result.data.createCollab.id}`)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create collab')
+    }
   }
 
   return (
@@ -28,6 +67,12 @@ export default function CreatePage() {
           <h3 className="font-semibold">Project Details</h3>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Title *</label>
@@ -86,9 +131,9 @@ export default function CreatePage() {
             <Button 
               type="submit" 
               className="w-full mt-6"
-              disabled={!title || isSubmitting}
+              disabled={!title || fetching}
             >
-              {isSubmitting ? 'Creating...' : 'Create Collab'}
+              {fetching ? 'Creating...' : 'Create Collab'}
             </Button>
           </form>
         </CardContent>
