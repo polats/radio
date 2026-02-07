@@ -3,9 +3,9 @@ import { gql } from '@urql/core'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 
-const OPEN_COLLABS_QUERY = gql`
-  query OpenCollabs($limit: Int) {
-    openCollabs(limit: $limit) {
+const ALL_COLLABS_QUERY = gql`
+  query AllCollabs($limit: Int) {
+    allCollabs(limit: $limit) {
       id
       title
       description
@@ -29,9 +29,9 @@ export default async function CollabsPage() {
   let collabs: any[] = []
   
   try {
-    const result = await client.query(OPEN_COLLABS_QUERY, { limit: 20 })
-    if (result.data?.openCollabs) {
-      collabs = result.data.openCollabs
+    const result = await client.query(ALL_COLLABS_QUERY, { limit: 20 })
+    if (result.data?.allCollabs) {
+      collabs = result.data.allCollabs
     }
   } catch (e) {
     console.error(e)
@@ -40,9 +40,9 @@ export default async function CollabsPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold mb-2">Open Collabs</h2>
+        <h2 className="text-3xl font-bold mb-2">Collabs</h2>
         <p className="text-zinc-400">
-          Join a collaboration and contribute your tracks
+          Browse collaborations and contribute your tracks
         </p>
       </div>
 
@@ -71,7 +71,13 @@ export default async function CollabsPage() {
                       )}
                     </div>
                     <div className="text-right">
-                      <span className="inline-block px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded">
+                      <span className={`inline-block px-2 py-1 text-xs rounded ${
+                        collab.status === 'OPEN' ? 'bg-green-900/30 text-green-400' :
+                        collab.status === 'IN_PROGRESS' ? 'bg-blue-900/30 text-blue-400' :
+                        collab.status === 'MIXING' ? 'bg-purple-900/30 text-purple-400' :
+                        collab.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400' :
+                        'bg-zinc-900/30 text-zinc-400'
+                      }`}>
                         {collab.status}
                       </span>
                       <p className="text-sm text-zinc-500 mt-2">
