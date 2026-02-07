@@ -1,4 +1,4 @@
-# Force rebuild: 2026-02-07T21:22
+# Force rebuild: 2026-02-07T21:30
 FROM node:22-alpine AS builder
 
 RUN npm install -g pnpm@10.5.2
@@ -21,6 +21,9 @@ COPY apps/web/ ./apps/web/
 
 # Ensure public directory exists for Next.js
 RUN mkdir -p /app/apps/web/public && touch /app/apps/web/public/.keep
+
+# Build shared package first (for types)
+RUN cd packages/shared && pnpm build
 
 # Build Next.js app
 RUN cd apps/web && pnpm build
