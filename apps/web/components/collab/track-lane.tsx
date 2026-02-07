@@ -164,11 +164,7 @@ export function TrackLane({
       >
         <div
           className={`absolute top-1 bottom-1 rounded transition-colors pointer-events-none ${
-            isThisPlaying 
-              ? 'bg-green-900/40' 
-              : isMuted 
-                ? 'bg-zinc-900/50' 
-                : 'bg-zinc-800/50'
+            isThisPlaying ? 'bg-green-900/40' : 'bg-zinc-800/50'
           }`}
           style={{ left, width: Math.max(width, 20) }}
         >
@@ -176,7 +172,7 @@ export function TrackLane({
             data={track.waveformData} 
             width={Math.max(width - 8, 20)} 
             height={waveformHeight}
-            color={isMuted ? '#52525b' : isThisPlaying ? '#22c55e' : waveformColors[track.status]}
+            color={isThisPlaying ? '#22c55e' : waveformColors[track.status]}
             className="mx-1"
           />
         </div>
