@@ -1,7 +1,7 @@
 import { cacheExchange, createClient, fetchExchange, Client } from '@urql/core'
 
 // Use environment variable or default to production API
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-1e18.up.railway.app'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-9382.up.railway.app'
 
 // Create urql client for server-side use
 export function createServerClient(): Client {
