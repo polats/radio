@@ -134,14 +134,13 @@ async function main() {
     
     console.log('\n3️⃣ Adding section...')
     const { addSection } = await graphql<{ addSection: { id: string } }>(`
-      mutation AddSection($collabId: String!, $name: String!, $durationBeats: Int!, $orderIndex: Int!) {
+      mutation AddSection($collabId: String!, $name: String!, $durationBeats: Int!) {
         addSection(collabId: $collabId, name: $name, durationBeats: $durationBeats, orderIndex: 0) { id }
       }
     `, {
       collabId,
-      name: 'Main',
+      name: 'Main Loop',
       durationBeats: patternData.pattern.bars * patternData.pattern.timeSignature[0],
-      orderIndex: 0,
     })
     sectionId = addSection.id
     console.log(`   ✅ Created section: ${sectionId}`)

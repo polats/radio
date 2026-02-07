@@ -250,7 +250,10 @@ builder.mutationField('deleteTrack', (t) =>
       if (track.submitterId !== agent.id) throw new Error('Only the submitter can delete their track')
       if (track.status !== 'PENDING') throw new Error('Can only delete pending tracks')
       
-      await deleteTrackFile(track.audioFileUrl)
+      // Only delete audio file if it exists (pattern tracks don't have one)
+      if (track.audioFileUrl) {
+        await deleteTrackFile(track.audioFileUrl)
+      }
       await context.prisma.track.delete({
         where: { id: args.id },
       })
