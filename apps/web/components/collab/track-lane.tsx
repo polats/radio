@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause } from 'lucide-react'
 import { Waveform } from './waveform'
 import { useAudioPlayer } from './audio-player-context'
 
@@ -61,10 +61,8 @@ export function TrackLane({
 }: TrackLaneProps) {
   const { 
     playingTrackIds, 
-    mutedTrackIds, 
     soloTrackId,
     playTrackSolo, 
-    toggleMuteTrack,
     isPlaying: timelinePlaying,
     pause,
     seek,
@@ -79,7 +77,6 @@ export function TrackLane({
   const waveformHeight = compact ? 36 : 44
   
   const isThisPlaying = playingTrackIds.includes(track.id)
-  const isMuted = mutedTrackIds.includes(track.id)
   const isSoloed = soloTrackId === track.id
   const hasAudio = !!track.signedAudioUrl
 
@@ -95,13 +92,10 @@ export function TrackLane({
     }
   }
 
-  const handleMuteClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    toggleMuteTrack(track.id)
-  }
-
   const handleWaveformClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // Always select the track when clicking waveform
+    onSelect()
+    
     if (!waveformRef.current) return
     
     const rect = waveformRef.current.getBoundingClientRect()
@@ -128,48 +122,26 @@ export function TrackLane({
     >
       {/* Track label */}
       <div 
-        className="flex-shrink-0 px-2 sm:px-3 flex items-center gap-1 sm:gap-2 border-r border-zinc-800 overflow-hidden"
+        className="flex-shrink-0 px-2 sm:px-3 flex items-center gap-2 border-r border-zinc-800 overflow-hidden"
         style={{ width: labelWidth }}
       >
         {/* Play button */}
         <button
           onClick={handlePlayClick}
           disabled={!hasAudio}
-          className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
+          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             hasAudio 
-              ? isThisPlaying 
+              ? isThisPlaying && timelinePlaying
                 ? 'bg-green-500 text-white' 
-                : isSoloed
-                  ? 'bg-green-700 text-white'
-                  : 'bg-zinc-700 hover:bg-zinc-600 text-white'
+                : 'bg-zinc-700 hover:bg-zinc-600 text-white'
               : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
           }`}
-          title={isThisPlaying ? 'Playing' : 'Solo this track'}
+          title={isThisPlaying && timelinePlaying ? 'Pause' : 'Play'}
         >
           {isThisPlaying && timelinePlaying ? (
-            <Pause className="w-3 h-3" />
+            <Pause className="w-4 h-4" />
           ) : (
-            <Play className="w-3 h-3 ml-0.5" />
-          )}
-        </button>
-        
-        {/* Mute button */}
-        <button
-          onClick={handleMuteClick}
-          disabled={!hasAudio}
-          className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center transition-colors ${
-            hasAudio 
-              ? isMuted
-                ? 'bg-red-600 text-white'
-                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
-              : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'
-          }`}
-          title={isMuted ? 'Unmute' : 'Mute'}
-        >
-          {isMuted ? (
-            <VolumeX className="w-3 h-3" />
-          ) : (
-            <Volume2 className="w-3 h-3" />
+            <Play className="w-4 h-4 ml-0.5" />
           )}
         </button>
         
@@ -183,7 +155,7 @@ export function TrackLane({
         </div>
       </div>
       
-      {/* Waveform area - click to scrub */}
+      {/* Waveform area - click to scrub and select */}
       <div 
         ref={waveformRef}
         className="flex-1 relative h-full cursor-crosshair"

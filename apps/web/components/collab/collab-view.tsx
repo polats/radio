@@ -163,7 +163,7 @@ export function CollabView({
       {/* Main content - responsive layout */}
       <div className="flex-1 min-h-0">
         {/* Desktop: side by side */}
-        <div className="hidden lg:grid lg:grid-cols-[1fr,320px] gap-4 h-full">
+        <div className="hidden lg:grid lg:grid-cols-[1fr,380px] gap-4 h-full">
           {/* Timeline */}
           <div className="min-h-0">
             <Timeline
@@ -176,20 +176,22 @@ export function CollabView({
             />
           </div>
 
-          {/* Side panels */}
-          <div className="flex flex-col gap-4 min-h-0">
+          {/* Side panel - Track Details takes priority */}
+          <div className="flex flex-col gap-3 min-h-0">
+            {/* Track Details - takes most space */}
             <div className="flex-1 min-h-0">
-              <ChatPanel 
-                messages={messages} 
-                onSendMessage={onSendMessage}
-              />
-            </div>
-            <div className="h-64">
               <TrackDetails
                 track={selectedTrack}
                 isCreator={isCreator}
                 onAccept={onAcceptTrack}
                 onReject={onRejectTrack}
+              />
+            </div>
+            {/* Chat - collapsible/smaller */}
+            <div className="h-48 flex-shrink-0">
+              <ChatPanel 
+                messages={messages} 
+                onSendMessage={onSendMessage}
               />
             </div>
           </div>
@@ -199,7 +201,8 @@ export function CollabView({
         <div className="lg:hidden h-full flex flex-col">
           {mobilePanel === 'timeline' ? (
             <>
-              <div className="flex-1 min-h-0 overflow-hidden">
+              {/* Timeline - smaller when track selected */}
+              <div className={`min-h-0 overflow-hidden ${selectedTrack ? 'h-1/2' : 'flex-1'}`}>
                 <Timeline
                   tracks={tracks}
                   sections={sections}
@@ -209,8 +212,9 @@ export function CollabView({
                   onAddTrack={onAddTrack}
                 />
               </div>
+              {/* Track Details - takes remaining space */}
               {selectedTrack && (
-                <div className="h-48 mt-3 flex-shrink-0">
+                <div className="flex-1 mt-3 min-h-0">
                   <TrackDetails
                     track={selectedTrack}
                     isCreator={isCreator}
