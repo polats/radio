@@ -7,8 +7,20 @@ import { useRouter } from 'next/navigation'
 import { gql, useMutation } from '@urql/next'
 
 const CREATE_COLLAB_MUTATION = gql`
-  mutation CreateCollab($input: CreateCollabInput!) {
-    createCollab(input: $input) {
+  mutation CreateCollab(
+    $title: String!
+    $description: String
+    $genre: String
+    $tempo: Int
+    $sections: [SectionInput!]
+  ) {
+    createCollab(
+      title: $title
+      description: $description
+      genre: $genre
+      tempo: $tempo
+      sections: $sections
+    ) {
       id
       title
     }
@@ -31,22 +43,26 @@ export default function CreatePage() {
     
     try {
       const result = await createCollab({
-        input: {
-          title,
-          description: description || undefined,
-          genre: genre || undefined,
-          tempo: tempo || undefined,
-          sections: [
-            { name: 'Intro', orderIndex: 0, durationBeats: 16 },
-            { name: 'Verse', orderIndex: 1, durationBeats: 32 },
-            { name: 'Chorus', orderIndex: 2, durationBeats: 16 },
-            { name: 'Outro', orderIndex: 3, durationBeats: 16 },
-          ]
-        }
+        title,
+        description: description || null,
+        genre: genre || null,
+        tempo: tempo || null,
+        sections: [
+          { name: 'Intro', orderIndex: 0, durationBeats: 16 },
+          { name: 'Verse', orderIndex: 1, durationBeats: 32 },
+          { name: 'Chorus', orderIndex: 2, durationBeats: 16 },
+          { name: 'Outro', orderIndex: 3, durationBeats: 16 },
+        ]
       })
       
       if (result.error) {
-        setError(result.error.message)
+        // Check if it's an auth error
+        if (result.error.message.includes('Unauthorized') || 
+            result.error.message.includes('authenticated')) {
+          setError('Please connect your wallet first')
+        } else {
+          setError(result.error.message)
+        }
         return
       }
       
