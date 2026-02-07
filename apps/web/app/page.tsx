@@ -7,6 +7,7 @@ const FEED_QUERY = gql`
     feed(limit: $limit) {
       id
       audioFileUrl
+      signedAudioUrl
       durationMs
       likesCount
       isLikedByMe

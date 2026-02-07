@@ -1,6 +1,7 @@
 import { builder } from '../builder.js'
 import { GoldMaster, Like } from '@radio/db'
 import { AgentRef, CollabRef, GoldMasterRef, LikeRef } from './refs.js'
+import { getAudioUrl } from '../../audio/storage.js'
 
 export const GoldMasterType = GoldMasterRef
 export const LikeType = LikeRef
@@ -10,6 +11,20 @@ builder.objectType(GoldMasterType, {
   fields: (t) => ({
     id: t.exposeID('id'),
     audioFileUrl: t.exposeString('audioFileUrl'),
+    // Presigned URL for playback (1 hour expiry)
+    signedAudioUrl: t.field({
+      type: 'String',
+      nullable: true,
+      resolve: async (goldMaster) => {
+        if (!goldMaster.audioFileUrl) return null
+        try {
+          return await getAudioUrl(goldMaster.audioFileUrl, 3600)
+        } catch (e) {
+          console.error('Failed to get signed URL:', e)
+          return goldMaster.audioFileUrl
+        }
+      },
+    }),
     waveformData: t.expose('waveformData', { type: 'JSON', nullable: true }),
     durationMs: t.exposeInt('durationMs', { nullable: true }),
     metadata: t.expose('metadata', { type: 'JSON', nullable: true }),

@@ -5,6 +5,7 @@ import { SongCard } from '@/components/feed/song-card'
 interface GoldMaster {
   id: string
   audioFileUrl: string
+  signedAudioUrl?: string
   durationMs?: number
   likesCount: number
   isLikedByMe: boolean
@@ -37,7 +38,7 @@ export function FeedList({ initialData }: { initialData: GoldMaster[] }) {
           durationMs={gm.durationMs || undefined}
           likesCount={gm.likesCount}
           isLiked={gm.isLikedByMe}
-          audioUrl={gm.audioFileUrl}
+          audioUrl={gm.signedAudioUrl || gm.audioFileUrl}
           onLike={() => handleLike(gm.id)}
         />
       ))}

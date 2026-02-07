@@ -68,13 +68,18 @@
 
 ---
 
-## Phase 2: Audio Integration
+## Phase 2: Audio Integration ✅
 
-After UI redesign:
-- [ ] Audio file upload (S3/R2)
-- [ ] Waveform generation
-- [ ] Actual audio playback
-- [ ] Track mixing/mixdown
+- [x] S3-compatible storage (Railway Buckets)
+  - storage.ts rewritten to support both local and S3
+  - Presigned URLs for secure audio access
+  - Auto-fallback to local storage for dev
+- [x] Waveform generation (FFmpeg-based)
+- [x] Audio metadata extraction (FFprobe)
+- [x] signedAudioUrl field on Track and GoldMaster
+- [x] UI playback in TrackDetails component
+- [x] Test audio files created (bass, drums, synth, hi-hat)
+- [ ] Track mixing/mixdown (future)
 
 ---
 

@@ -1,7 +1,8 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Play, VolumeX, Check, X, RotateCcw } from 'lucide-react'
+import { Play, Pause, VolumeX, Volume2, Check, X, RotateCcw } from 'lucide-react'
 
 interface Track {
   id: string
@@ -9,6 +10,7 @@ interface Track {
   description?: string
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'REVISION'
   durationMs?: number
+  signedAudioUrl?: string
   creatorNotes?: string
   submitter: {
     id: string
@@ -34,6 +36,26 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 }
 
 export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRevision }: TrackDetailsProps) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+
+  const handlePlayPause = () => {
+    if (!audioRef.current || !track?.signedAudioUrl) return
+    if (isPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleMute = () => {
+    if (!audioRef.current) return
+    audioRef.current.muted = !isMuted
+    setIsMuted(!isMuted)
+  }
+
   if (!track) {
     return (
       <div className="h-full flex items-center justify-center text-zinc-600 text-sm bg-zinc-900/50 rounded-lg border border-zinc-800">
@@ -44,9 +66,19 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
 
   const status = statusLabels[track.status]
   const durationSec = track.durationMs ? track.durationMs / 1000 : 0
+  const hasAudio = !!track.signedAudioUrl
 
   return (
     <div className="h-full flex flex-col bg-zinc-900/50 rounded-lg border border-zinc-800 overflow-hidden">
+      {/* Hidden audio element */}
+      {hasAudio && (
+        <audio 
+          ref={audioRef} 
+          src={track.signedAudioUrl} 
+          onEnded={() => setIsPlaying(false)}
+        />
+      )}
+      
       <div className="px-3 py-2 border-b border-zinc-800 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-sm truncate">{track.instrument}</h3>
@@ -84,11 +116,31 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
       {/* Actions */}
       <div className="p-2 border-t border-zinc-800 space-y-2 flex-shrink-0">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 text-xs h-8">
-            <Play className="w-3 h-3 mr-1" /> Solo
+          <Button 
+            variant={isPlaying ? "default" : "outline"} 
+            size="sm" 
+            className="flex-1 text-xs h-8"
+            onClick={handlePlayPause}
+            disabled={!hasAudio}
+          >
+            {isPlaying ? (
+              <><Pause className="w-3 h-3 mr-1" /> Playing</>
+            ) : (
+              <><Play className="w-3 h-3 mr-1" /> {hasAudio ? 'Solo' : 'No Audio'}</>
+            )}
           </Button>
-          <Button variant="outline" size="sm" className="flex-1 text-xs h-8">
-            <VolumeX className="w-3 h-3 mr-1" /> Mute
+          <Button 
+            variant={isMuted ? "default" : "outline"} 
+            size="sm" 
+            className="flex-1 text-xs h-8"
+            onClick={handleMute}
+            disabled={!hasAudio}
+          >
+            {isMuted ? (
+              <><VolumeX className="w-3 h-3 mr-1" /> Muted</>
+            ) : (
+              <><Volume2 className="w-3 h-3 mr-1" /> Mute</>
+            )}
           </Button>
         </div>
         

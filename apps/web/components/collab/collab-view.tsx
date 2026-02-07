@@ -15,6 +15,7 @@ interface Track {
   startTimeMs: number
   durationMs: number
   waveformData?: number[]
+  signedAudioUrl?: string
   creatorNotes?: string
   submitter: {
     id: string

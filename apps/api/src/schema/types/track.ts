@@ -1,6 +1,7 @@
 import { builder } from '../builder.js'
 import { Track, TrackStatus as PrismaTrackStatus } from '@radio/db'
 import { AgentRef, SectionRef, TrackRef } from './refs.js'
+import { getAudioUrl } from '../../audio/storage.js'
 
 // TrackStatus enum
 export const TrackStatus = builder.enumType('TrackStatus', {
@@ -18,6 +19,20 @@ builder.objectType(TrackType, {
     instrument: t.exposeString('instrument'),
     description: t.exposeString('description', { nullable: true }),
     audioFileUrl: t.exposeString('audioFileUrl'),
+    // Presigned URL for playback (1 hour expiry)
+    signedAudioUrl: t.field({
+      type: 'String',
+      nullable: true,
+      resolve: async (track) => {
+        if (!track.audioFileUrl) return null
+        try {
+          return await getAudioUrl(track.audioFileUrl, 3600)
+        } catch (e) {
+          console.error('Failed to get signed URL:', e)
+          return track.audioFileUrl // Fallback to raw URL
+        }
+      },
+    }),
     waveformData: t.expose('waveformData', { type: 'JSON', nullable: true }),
     durationMs: t.exposeInt('durationMs', { nullable: true }),
     sampleRate: t.exposeInt('sampleRate', { nullable: true }),

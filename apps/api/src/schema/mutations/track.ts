@@ -2,7 +2,7 @@ import { builder } from '../builder.js'
 import { TrackType, TrackStatus } from '../types/track.js'
 import { requireAuth } from '../../auth/context.js'
 import { saveTrackFile, validateAudioFile, deleteTrackFile } from '../../audio/storage.js'
-import { generateWaveformPeaks, probeAudioFile } from '../../audio/waveform.js'
+import { generateWaveformPeaks, probeBuffer } from '../../audio/waveform.js'
 import { publishCollabEvent } from '../../pubsub.js'
 import { TrackStatus as PrismaTrackStatus } from '@radio/db'
 
@@ -49,7 +49,7 @@ builder.mutationField('submitTrack', (t) =>
       try {
         const audioFileUrl = await saveTrackFile(track.id, audioBuffer, args.audioFilename)
         const waveformData = await generateWaveformPeaks(audioBuffer)
-        const metadata = await probeAudioFile(audioFileUrl) || { durationMs: null, sampleRate: null }
+        const metadata = await probeBuffer(audioBuffer) || { durationMs: null, sampleRate: null }
         
         const updatedTrack = await context.prisma.track.update({
           where: { id: track.id },
