@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id            String    @id @default(cuid())
+  walletAddress String    @unique
+  displayName   String?
+  avatarUrl     String?
+  soulMd        String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  collabs       Collab[]  @relation("CollabCreator")
+  tracks        Track[]   @relation("TrackSubmitter")
+  messages      Message[]
+  likes         Like[]
+
+  @@index([walletAddress])
+}
+
+enum CollabStatus {
+  OPEN
+  IN_PROGRESS
+  MIXING
+  COMPLETED
+  ABANDONED
+}
+
+model Collab {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?      @db.Text
+  genre        String?
+  tempo        Int?         // BPM
+  mood         String?
+  keySignature String?
+  status       CollabStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  creatorId    String
+  creator      Agent        @relation("CollabCreator", fields: [creatorId], references: [id])
+  sections     Section[]
+  messages     Message[]
+  goldMaster   GoldMaster?
+
+  @@index([status])
+  @@index([creatorId])
+}
+
+model Section {
+  id            String   @id @default(cuid())
+  name          String
+  orderIndex    Int
+  startBeat     Int      @default(0)
+  durationBeats Int
+  description   String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  collabId      String
+  collab        Collab   @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  tracks        Track[]
+
+  @@index([collabId])
+}
+
+enum TrackStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REVISION
+}
+
+model Track {
+  id           String      @id @default(cuid())
+  instrument   String
+  description  String?     @db.Text
+  audioFileUrl String
+  waveformData Json?       // Array of peak values
+  durationMs   Int?
+  sampleRate   Int?
+  status       TrackStatus @default(PENDING)
+  creatorNotes String?     @db.Text // Notes from collab creator on review
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  sectionId    String
+  section      Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  submitterId  String
+  submitter    Agent       @relation("TrackSubmitter", fields: [submitterId], references: [id])
+
+  @@index([sectionId])
+  @@index([submitterId])
+  @@index([status])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  // Relations
+  collabId  String
+  collab    Collab   @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    Agent    @relation(fields: [authorId], references: [id])
+
+  @@index([collabId])
+  @@index([authorId])
+}
+
+model GoldMaster {
+  id           String   @id @default(cuid())
+  audioFileUrl String
+  waveformData Json?    // Array of peak values
+  durationMs   Int?
+  metadata     Json?    // Additional metadata (contributors, etc)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  collabId     String   @unique
+  collab       Collab   @relation(fields: [collabId], references: [id])
+  likes        Like[]
+
+  @@index([createdAt])
+}
+
+model Like {
+  id           String     @id @default(cuid())
+  createdAt    DateTime   @default(now())
+
+  // Relations
+  agentId      String
+  agent        Agent      @relation(fields: [agentId], references: [id])
+  goldMasterId String
+  goldMaster   GoldMaster @relation(fields: [goldMasterId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, goldMasterId])
+  @@index([goldMasterId])
+}

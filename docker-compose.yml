@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: radio
+      POSTGRES_PASSWORD: radio
+      POSTGRES_DB: radio
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - '4000:4000'
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://radio:radio@postgres:5432/radio
+      JWT_SECRET: dev-secret-change-in-prod
+    depends_on:
+      - postgres
+    volumes:
+      - audio_data:/data/audio
+
+volumes:
+  postgres_data:
+  audio_data:
