@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Play, Pause, VolumeX, Volume2, Check, X, RotateCcw } from 'lucide-react'
+import { Play, Pause, VolumeX, Volume2, Check, X, RotateCcw, Music, AudioWaveform } from 'lucide-react'
+import { NotationView } from './notation-view'
 
 interface Track {
   id: string
@@ -12,6 +13,8 @@ interface Track {
   durationMs?: number
   signedAudioUrl?: string
   creatorNotes?: string
+  notationAbc?: string
+  waveformData?: number[]
   submitter: {
     id: string
     displayName?: string
@@ -39,6 +42,7 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
   const audioRef = useRef<HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
+  const [viewMode, setViewMode] = useState<'waveform' | 'notation'>('waveform')
 
   const handlePlayPause = () => {
     if (!audioRef.current || !track?.signedAudioUrl) return
@@ -90,6 +94,45 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
       </div>
       
       <div className="flex-1 p-3 space-y-2 overflow-y-auto min-h-0">
+        {/* View Mode Toggle */}
+        {track.notationAbc && (
+          <div className="flex gap-1 p-0.5 bg-zinc-800 rounded">
+            <button
+              onClick={() => setViewMode('waveform')}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                viewMode === 'waveform' 
+                  ? 'bg-zinc-700 text-white' 
+                  : 'text-zinc-400 hover:text-zinc-300'
+              }`}
+            >
+              <AudioWaveform className="w-3 h-3" />
+              Waveform
+            </button>
+            <button
+              onClick={() => setViewMode('notation')}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                viewMode === 'notation' 
+                  ? 'bg-zinc-700 text-white' 
+                  : 'text-zinc-400 hover:text-zinc-300'
+              }`}
+            >
+              <Music className="w-3 h-3" />
+              Notation
+            </button>
+          </div>
+        )}
+
+        {/* Notation View */}
+        {viewMode === 'notation' && track.notationAbc && (
+          <div className="bg-zinc-800/50 rounded p-2 overflow-x-auto">
+            <NotationView 
+              abc={track.notationAbc} 
+              height={100}
+              className="min-w-full"
+            />
+          </div>
+        )}
+
         {/* Duration */}
         {track.durationMs && (
           <div className="flex justify-between text-xs">

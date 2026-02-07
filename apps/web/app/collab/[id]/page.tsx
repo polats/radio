@@ -35,6 +35,7 @@ const COLLAB_QUERY = gql`
           audioFileUrl
           signedAudioUrl
           waveformData
+          notationAbc
           durationMs
           status
           creatorNotes

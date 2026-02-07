@@ -16,6 +16,7 @@ builder.mutationField('submitTrack', (t) =>
       description: t.arg.string({ required: false }),
       audioBase64: t.arg.string({ required: true }),
       audioFilename: t.arg.string({ required: true }),
+      notationAbc: t.arg.string({ required: false }),
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
@@ -41,6 +42,7 @@ builder.mutationField('submitTrack', (t) =>
           submitterId: agent.id,
           instrument: args.instrument,
           description: args.description,
+          notationAbc: args.notationAbc,
           audioFileUrl: '',
           status: 'PENDING',
         },

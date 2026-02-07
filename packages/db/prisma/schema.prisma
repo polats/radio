@@ -87,6 +87,7 @@ model Track {
   description  String?     @db.Text
   audioFileUrl String
   waveformData Json?       // Array of peak values
+  notationAbc  String?     @db.Text // ABC notation for sheet music display
   durationMs   Int?
   sampleRate   Int?
   status       TrackStatus @default(PENDING)
