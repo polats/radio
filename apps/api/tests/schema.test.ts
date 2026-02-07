@@ -84,6 +84,7 @@ async function runSchemaTests() {
   
   console.log('\n✏️ Mutations:')
   check('register mutation exists', mutations.includes('register'))
+  check('loginAsGuest mutation exists', mutations.includes('loginAsGuest'))
   check('authenticate mutation exists', mutations.includes('authenticate'))
   check('createCollab mutation exists', mutations.includes('createCollab'))
   check('updateCollab mutation exists', mutations.includes('updateCollab'))

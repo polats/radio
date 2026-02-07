@@ -103,10 +103,10 @@ async function runTests() {
   await test('createCollab requires authentication', async () => {
     const res = await graphql(`
       mutation {
-        createCollab(input: {
+        createCollab(
           title: "Test Collab"
           sections: [{ name: "Intro", orderIndex: 0, durationBeats: 16 }]
-        }) { id }
+        ) { id }
       }
     `)
     assert(res.errors?.length > 0, 'Expected auth error')
@@ -179,6 +179,44 @@ async function runTests() {
     assert(mutations.includes('authenticate'), 'Missing authenticate mutation')
     assert(mutations.includes('createCollab'), 'Missing createCollab mutation')
     assert(mutations.includes('submitTrack'), 'Missing submitTrack mutation')
+    assert(mutations.includes('loginAsGuest'), 'Missing loginAsGuest mutation')
+  })
+
+  // Guest authentication flow
+  let guestToken: string = ''
+  
+  await test('Guest login works', async () => {
+    const res = await graphql(`mutation { loginAsGuest { token agent { id walletAddress displayName } } }`)
+    assert(res.data?.loginAsGuest?.token, 'Expected token')
+    assert(res.data?.loginAsGuest?.agent?.walletAddress?.startsWith('0xguest'), 'Expected guest wallet')
+    guestToken = res.data.loginAsGuest.token
+  })
+
+  await test('Guest can create collab', async () => {
+    const res = await graphql(`
+      mutation {
+        createCollab(
+          title: "Guest Test Collab"
+          genre: "electronic"
+          tempo: 120
+          sections: [{ name: "Intro", orderIndex: 0, durationBeats: 16 }]
+        ) {
+          id
+          title
+          status
+          sections { id name }
+        }
+      }
+    `, undefined, guestToken)
+    assert(res.data?.createCollab?.id, 'Expected collab id')
+    assert(res.data?.createCollab?.title === 'Guest Test Collab', 'Expected title')
+    assert(res.data?.createCollab?.sections?.length === 1, 'Expected 1 section')
+  })
+
+  await test('Guest can query their collab', async () => {
+    const res = await graphql('{ myCollabs { id title } }', undefined, guestToken)
+    assert(Array.isArray(res.data?.myCollabs), 'Expected collabs array')
+    assert(res.data.myCollabs.length >= 1, 'Expected at least 1 collab')
   })
 
   // Summary
