@@ -1,16 +1,17 @@
+# Force rebuild: 2026-02-07T05:10
 FROM node:22-alpine
 
 RUN npm install -g pnpm@10.5.2
 
 WORKDIR /app
 
-# Copy workspace config
+# Copy workspace config files
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 
-# Install dependencies
+# Install all dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source files
