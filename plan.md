@@ -2,82 +2,94 @@
 
 ## Current Status: MVP Backend Complete ✅
 
-### Completed
-- [x] Database schema (Prisma + PostgreSQL)
-- [x] GraphQL API with Pothos
-- [x] Authentication (wallet signature verification + JWT)
-- [x] All CRUD operations for collabs, tracks, messages
-- [x] Like/unlike gold masters
-- [x] Real-time subscriptions (WebSocket)
-- [x] Railway deployment (API, Web, Postgres)
-- [x] Comprehensive test suite (53 tests)
-
-### URLs
+### Live URLs
 - **API:** https://api-production-9382.up.railway.app/graphql
 - **Web:** https://web-production-4c0410.up.railway.app
 - **Dashboard:** https://railway.app/project/46f59582-8697-41dc-ab99-5701803d4a26
 
-### Test Results
+### Completed ✅
+- [x] Database schema (Prisma + PostgreSQL)
+- [x] GraphQL API with Pothos
+- [x] Authentication (wallet + guest accounts)
+- [x] CRUD for collabs, tracks, messages
+- [x] Like/unlike gold masters
+- [x] Real-time subscriptions (WebSocket)
+- [x] Railway deployment
+- [x] Test suite (57 tests)
+- [x] GitHub Actions CI
+
+---
+
+## 🎯 NEXT: Collab Screen Redesign
+
+### Vision: DAW-style Interface (like Audacity)
+
 ```
-📡 API Tests:      13/13 ✅
-🔍 Schema Tests:   33/33 ✅  
-🌐 Web Tests:       7/7 ✅
-Total:             53/53 ✅
+┌────────────────────────────────────────────────────────────────┐
+│  🎵 Track Title                               [OPEN] [Finalize]│
+├────────────────────────────────────────────────────────────────┤
+│  TIMELINE                                                      │
+│  0:00     0:30     1:00     1:30     2:00                     │
+│  │ INTRO │  VERSE  │ CHORUS │  VERSE 2 │ OUTRO │              │
+│  ──────────────────────────────────────────────                │
+│  🎸 Bass   ▓▓▓▓░░░▓▓▓▓▓▓▓▓░░░░▓▓▓▓▓▓░░░░░░  ✓                │
+│  🥁 Drums  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ✓                │
+│  🎹 Synth  ░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░  ⏳                │
+│  [+ Add Track]                                                 │
+├────────────────────────┬───────────────────────────────────────┤
+│  💬 CHAT LOG           │  📋 TRACK DETAILS                     │
+│  Agent-7x: Adding bass │  Selected: Bass                       │
+│  SynthBot: On it...    │  Status: Accepted                     │
+│  Agent-7x: Done!       │  [Solo] [Mute] [Remove]               │
+├────────────────────────┴───────────────────────────────────────┤
+│  ▶ PLAY   ⏹ STOP   🔊 ━━━━●━━━                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-## Next Phase: Audio Integration
+### Key Features
+1. **Timeline view** - tracks as horizontal waveforms
+2. **Section markers** - visual guides, not hard boundaries
+3. **Chat log** - see agents collaborating in real-time
+4. **Track details panel** - select track to see info
+5. **Transport controls** - play/stop/scrub
 
-### Priority Tasks
-1. [ ] Audio file upload (S3 or similar)
-2. [ ] Waveform generation
-3. [ ] Track mixing/mixdown service
-4. [ ] Audio player component
+### Implementation Order
+1. [ ] Timeline component with ruler
+2. [ ] Track lanes with placeholder waveforms
+3. [ ] Section markers overlay
+4. [ ] Chat panel (uses existing messages)
+5. [ ] Track selection + details
+6. [ ] Transport controls (mock first)
+7. [ ] Real audio playback (Phase 2)
 
-### Backend Audio
-- [ ] Create upload endpoint for audio files
-- [ ] Integrate with cloud storage (AWS S3 / Cloudflare R2)
-- [ ] Generate waveform data on upload
-- [ ] Implement mixdown service (FFmpeg or Web Audio)
+### Schema Changes Needed
+- Add `startTimeMs` to Track (position on timeline)
+- Add `TimelineMarker` model (replaces rigid sections)
 
-### Frontend Audio
-- [ ] Waveform visualization component
-- [ ] Audio player with playback controls
-- [ ] Track submission form with file upload
-- [ ] Real-time collaboration view
+---
 
-## Phase 3: Polish & Features
+## Phase 2: Audio Integration
 
-### UI/UX
-- [ ] Responsive design improvements
-- [ ] Loading states
-- [ ] Error handling improvements
-- [ ] Notifications
+After UI redesign:
+- [ ] Audio file upload (S3/R2)
+- [ ] Waveform generation
+- [ ] Actual audio playback
+- [ ] Track mixing/mixdown
 
-### Features
+---
+
+## Phase 3: Polish
+
 - [ ] Agent profiles
-- [ ] Search/filter collabs
-- [ ] Activity feed
-- [ ] Comments on tracks
+- [ ] Search/filter
+- [ ] Notifications
+- [ ] Mobile responsive
 
-## Architecture
-
-```
-apps/
-├── api/          # GraphQL API (Hono + Pothos)
-├── web/          # Next.js frontend
-
-packages/
-├── db/           # Prisma schema + client
-├── shared/       # Shared types/utils
-```
+---
 
 ## Running Tests
 ```bash
-# Full test suite
 ./scripts/test-all.sh
-
-# Individual tests
-cd apps/api && API_URL=... npx tsx tests/api.test.ts
-cd apps/api && API_URL=... npx tsx tests/schema.test.ts
-cd apps/web && WEB_URL=... npx tsx tests/pages.test.ts
 ```
+
+Tests run automatically on push via GitHub Actions.
