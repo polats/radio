@@ -66,6 +66,7 @@ interface CollabViewProps {
   sections: Section[]
   messages: Message[]
   isCreator: boolean
+  tempo?: number
   onSendMessage?: (content: string) => void
   onAcceptTrack?: (trackId: string) => void
   onRejectTrack?: (trackId: string) => void
@@ -85,6 +86,7 @@ export function CollabView({
   sections,
   messages,
   isCreator,
+  tempo = 120,
   onSendMessage,
   onAcceptTrack,
   onRejectTrack,
@@ -180,6 +182,7 @@ export function CollabView({
               <TrackDetails
                 track={selectedTrack}
                 isCreator={isCreator}
+                tempo={tempo}
                 onAccept={onAcceptTrack}
                 onReject={onRejectTrack}
               />
@@ -214,6 +217,7 @@ export function CollabView({
                   <TrackDetails
                     track={selectedTrack}
                     isCreator={isCreator}
+                    tempo={tempo}
                     onAccept={onAcceptTrack}
                     onReject={onRejectTrack}
                   />

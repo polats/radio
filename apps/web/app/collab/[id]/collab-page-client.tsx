@@ -63,6 +63,7 @@ export function CollabPageClient({ collab, tracks, sections, messages }: CollabP
         sections={sections}
         messages={messages}
         isCreator={isCreator}
+        tempo={collab.tempo || 120}
         onSendMessage={handleSendMessage}
         onAcceptTrack={handleAcceptTrack}
         onRejectTrack={handleRejectTrack}

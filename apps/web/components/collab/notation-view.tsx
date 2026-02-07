@@ -17,6 +17,7 @@ interface NotationViewProps {
   currentBeat?: number
   isPlaying?: boolean
   bpm?: number
+  totalBeats?: number
 }
 
 // Sample drum notation if none provided
@@ -40,6 +41,7 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
   currentBeat,
   isPlaying = false,
   bpm = 120,
+  totalBeats = 16,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,18 +58,18 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
 
   // Highlight note at beat position
   const highlightNote = useCallback((beatPosition: number) => {
-    if (!containerRef.current || !tuneObject) return
+    if (!containerRef.current) return
     
     clearHighlight()
     
-    // Find notes near this beat position
+    // Find all note elements
     const notes = containerRef.current.querySelectorAll('.abcjs-note, .abcjs-rest, .abcjs-chord')
     if (notes.length === 0) return
     
-    // Calculate which note index based on beat position
-    // This is approximate - ABCJS doesn't expose exact timing for each element
-    const totalBeats = 16 // Assume 4 bars of 4/4
-    const noteIndex = Math.floor((beatPosition / totalBeats) * notes.length)
+    // Calculate which note index based on beat position relative to total beats
+    // Use the passed totalBeats prop for accurate sync
+    const progress = Math.max(0, Math.min(1, beatPosition / totalBeats))
+    const noteIndex = Math.floor(progress * notes.length)
     const clampedIndex = Math.min(Math.max(0, noteIndex), notes.length - 1)
     
     const noteEl = notes[clampedIndex]
@@ -75,10 +77,10 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
       noteEl.classList.add('abcjs-note-playing')
       lastHighlightedRef.current = [noteEl]
       
-      // Scroll into view if needed
-      noteEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      // Scroll into view if needed (smooth can be jerky, use auto for faster updates)
+      noteEl.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' })
     }
-  }, [tuneObject, clearHighlight])
+  }, [clearHighlight, totalBeats])
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
