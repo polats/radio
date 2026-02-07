@@ -180,6 +180,7 @@ export function CollabView({
               <TrackDetails
                 track={selectedTrack}
                 isCreator={isCreator}
+                tempo={collab.tempo || 120}
                 onAccept={onAcceptTrack}
                 onReject={onRejectTrack}
               />
@@ -214,6 +215,7 @@ export function CollabView({
                   <TrackDetails
                     track={selectedTrack}
                     isCreator={isCreator}
+                    tempo={collab.tempo || 120}
                     onAccept={onAcceptTrack}
                     onReject={onRejectTrack}
                   />

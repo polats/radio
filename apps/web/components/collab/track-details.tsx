@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Play, Pause, Check, X, RotateCcw, Music } from 'lucide-react'
 import { NotationView, NotationViewHandle } from './notation-view'
 import { usePatternPlayer } from '../audio/use-pattern-player'
+import { useAudioPlayer } from './audio-player-context'
 import type { PatternData } from '@radio/shared'
 
 interface Track {
@@ -12,6 +13,7 @@ interface Track {
   instrument: string
   description?: string
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'REVISION'
+  startTimeMs?: number
   durationMs?: number
   signedAudioUrl?: string
   patternData?: PatternData
@@ -29,6 +31,7 @@ interface Track {
 interface TrackDetailsProps {
   track: Track | null
   isCreator: boolean
+  tempo?: number
   onAccept?: (trackId: string) => void
   onReject?: (trackId: string) => void
   onRequestRevision?: (trackId: string) => void
@@ -41,42 +44,30 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   REVISION: { label: 'Revision', color: 'text-orange-400' },
 }
 
-export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRevision }: TrackDetailsProps) {
+export function TrackDetails({ track, isCreator, tempo = 120, onAccept, onReject, onRequestRevision }: TrackDetailsProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const notationRef = useRef<NotationViewHandle>(null)
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
-  const [currentBeat, setCurrentBeat] = useState(0)
   const patternPlayer = usePatternPlayer()
+  
+  // Get timeline state for syncing notation
+  const { currentTimeMs, isPlaying: timelinePlaying, playingTrackIds } = useAudioPlayer()
   
   const hasPattern = !!track?.patternData
   const hasAudio = !!track?.signedAudioUrl
   const canPlay = hasPattern || hasAudio
   const isPlaying = hasPattern ? patternPlayer.isPlaying : isPlayingAudio
 
-  // Update beat position during playback for notation highlighting
-  useEffect(() => {
-    if (!isPlaying || !hasPattern) return
-    
-    const bpm = 120
-    const beatsPerSecond = bpm / 60
-    const intervalMs = 1000 / (beatsPerSecond * 4) // 16th notes
-    
-    const interval = setInterval(() => {
-      setCurrentBeat(prev => {
-        const next = prev + 0.25
-        return next >= 16 ? 0 : next
-      })
-    }, intervalMs)
-    
-    return () => clearInterval(interval)
-  }, [isPlaying, hasPattern])
-
-  // Reset beat on stop
-  useEffect(() => {
-    if (!isPlaying) {
-      setCurrentBeat(0)
-    }
-  }, [isPlaying])
+  // Calculate current beat position relative to this track (synced with timeline)
+  const trackStartMs = track?.startTimeMs || 0
+  const trackDurationMs = track?.durationMs || 8000
+  const msPerBeat = 60000 / tempo
+  const timeIntoTrack = currentTimeMs - trackStartMs
+  const isTrackInRange = timeIntoTrack >= 0 && timeIntoTrack < trackDurationMs
+  const currentBeat = isTrackInRange ? timeIntoTrack / msPerBeat : 0
+  
+  // Track is playing if timeline is playing and we're in this track's time range
+  const isTrackPlayingOnTimeline = timelinePlaying && isTrackInRange
 
   const handlePlayPause = async () => {
     if (!track) return
@@ -146,14 +137,14 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
               </span>
             )}
           </div>
-          {/* Notation display */}
+          {/* Notation display - syncs with timeline */}
           <div className="overflow-x-auto bg-zinc-900/80 px-2">
             <NotationView 
               ref={notationRef}
               abc={track.notationAbc} 
               height={90}
               className="min-w-full"
-              isPlaying={isPlaying}
+              isPlaying={isPlaying || isTrackPlayingOnTimeline}
               currentBeat={currentBeat}
             />
           </div>
