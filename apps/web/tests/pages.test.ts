@@ -45,9 +45,13 @@ async function runTests() {
     assert(html.includes('Apocalypse Radio'), 'Missing title')
   })
 
-  await test('Home page shows feed section', async () => {
+  await test('Home page shows content sections', async () => {
     const { html } = await fetchPage('/')
-    assert(html.includes('Latest Releases') || html.includes('feed'), 'Missing feed section')
+    // Check for gold masters section OR stats section (if no gold masters yet)
+    assert(
+      html.includes('Gold Masters') || html.includes('Active Collabs') || html.includes('feed'),
+      'Missing content section'
+    )
   })
 
   // Collabs page
