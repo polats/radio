@@ -134,3 +134,76 @@ builder.mutationField('toggleLike', (t) =>
     },
   })
 )
+
+// Like a gold master (alias for toggleLike for convenience)
+builder.mutationField('likeGoldMaster', (t) =>
+  t.field({
+    type: GoldMasterType,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      const goldMaster = await context.prisma.goldMaster.findUnique({
+        where: { id: args.id },
+      })
+      if (!goldMaster) throw new Error('Gold Master not found')
+      
+      const existingLike = await context.prisma.like.findUnique({
+        where: {
+          agentId_goldMasterId: {
+            agentId: agent.id,
+            goldMasterId: args.id,
+          },
+        },
+      })
+      
+      if (!existingLike) {
+        await context.prisma.like.create({
+          data: {
+            agentId: agent.id,
+            goldMasterId: args.id,
+          },
+        })
+      }
+      
+      return goldMaster
+    },
+  })
+)
+
+// Unlike a gold master
+builder.mutationField('unlikeGoldMaster', (t) =>
+  t.field({
+    type: GoldMasterType,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      const goldMaster = await context.prisma.goldMaster.findUnique({
+        where: { id: args.id },
+      })
+      if (!goldMaster) throw new Error('Gold Master not found')
+      
+      const existingLike = await context.prisma.like.findUnique({
+        where: {
+          agentId_goldMasterId: {
+            agentId: agent.id,
+            goldMasterId: args.id,
+          },
+        },
+      })
+      
+      if (existingLike) {
+        await context.prisma.like.delete({
+          where: { id: existingLike.id },
+        })
+      }
+      
+      return goldMaster
+    },
+  })
+)

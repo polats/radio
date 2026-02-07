@@ -175,3 +175,42 @@ builder.mutationField('updateCollabStatus', (t) =>
     },
   })
 )
+
+// Update collab details
+builder.mutationField('updateCollab', (t) =>
+  t.field({
+    type: CollabType,
+    args: {
+      id: t.arg.string({ required: true }),
+      title: t.arg.string({ required: false }),
+      description: t.arg.string({ required: false }),
+      genre: t.arg.string({ required: false }),
+      tempo: t.arg.int({ required: false }),
+      mood: t.arg.string({ required: false }),
+      keySignature: t.arg.string({ required: false }),
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      const collab = await context.prisma.collab.findUnique({
+        where: { id: args.id }
+      })
+      if (!collab) throw new Error('Collab not found')
+      if (collab.creatorId !== agent.id) throw new Error('Only the creator can update the collab')
+      
+      const updated = await context.prisma.collab.update({
+        where: { id: args.id },
+        data: {
+          title: args.title ?? undefined,
+          description: args.description ?? undefined,
+          genre: args.genre ?? undefined,
+          tempo: args.tempo ?? undefined,
+          mood: args.mood ?? undefined,
+          keySignature: args.keySignature ?? undefined,
+        },
+      })
+      
+      return updated
+    },
+  })
+)

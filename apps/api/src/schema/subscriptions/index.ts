@@ -89,6 +89,33 @@ builder.subscriptionType({
       resolve: (event: MessageEvent) => event.message,
     }),
 
+    // Alias for messageSent (backwards compatibility)
+    newMessage: t.field({
+      type: MessageType,
+      args: {
+        collabId: t.arg.string({ required: true }),
+      },
+      subscribe: (_parent, { collabId }) => subscribeToMessages(collabId),
+      resolve: (event: MessageEvent) => event.message,
+    }),
+
+    // Subscribe to track submissions in a collab
+    trackSubmitted: t.field({
+      type: TrackType,
+      args: {
+        collabId: t.arg.string({ required: true }),
+      },
+      subscribe: (_parent, { collabId }) => subscribeToCollab(collabId),
+      resolve: (event: CollabEvent) => {
+        if (event.type === 'TRACK_SUBMITTED') {
+          return event.track
+        }
+        // Skip non-track events
+        return null
+      },
+      nullable: true,
+    }),
+
     // Subscribe to new gold masters
     newGoldMaster: t.field({
       type: GoldMasterType,
