@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run API Tests
+        env:
+          API_URL: https://api-production-9382.up.railway.app
+        run: |
+          cd apps/api
+          npx tsx tests/api.test.ts
+
+      - name: Run Schema Tests
+        env:
+          API_URL: https://api-production-9382.up.railway.app
+        run: |
+          cd apps/api
+          npx tsx tests/schema.test.ts
+
+      - name: Run Web Tests
+        env:
+          WEB_URL: https://web-production-4c0410.up.railway.app
+        run: |
+          cd apps/web
+          npx tsx tests/pages.test.ts
