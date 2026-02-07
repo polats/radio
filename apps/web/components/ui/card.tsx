@@ -24,6 +24,14 @@ export function CardHeader({ children, className }: CardProps) {
   )
 }
 
+export function CardTitle({ children, className }: CardProps) {
+  return (
+    <h3 className={clsx('text-lg font-semibold', className)}>
+      {children}
+    </h3>
+  )
+}
+
 export function CardContent({ children, className }: CardProps) {
   return (
     <div className={clsx('p-4', className)}>
