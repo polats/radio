@@ -17,11 +17,11 @@ interface NotationViewProps {
   currentBeat?: number
   isPlaying?: boolean
   bpm?: number
-  totalBeats?: number
 }
 
-// Sample drum notation if none provided (no title)
+// Sample drum notation if none provided
 const SAMPLE_DRUM_ABC = `X:1
+T:Drum Pattern
 M:4/4
 L:1/16
 Q:1/4=120
@@ -40,7 +40,6 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
   currentBeat,
   isPlaying = false,
   bpm = 120,
-  totalBeats = 16,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -57,18 +56,18 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
 
   // Highlight note at beat position
   const highlightNote = useCallback((beatPosition: number) => {
-    if (!containerRef.current) return
+    if (!containerRef.current || !tuneObject) return
     
     clearHighlight()
     
-    // Find all note elements
+    // Find notes near this beat position
     const notes = containerRef.current.querySelectorAll('.abcjs-note, .abcjs-rest, .abcjs-chord')
     if (notes.length === 0) return
     
-    // Calculate which note index based on beat position relative to total beats
-    // Use the passed totalBeats prop for accurate sync
-    const progress = Math.max(0, Math.min(1, beatPosition / totalBeats))
-    const noteIndex = Math.floor(progress * notes.length)
+    // Calculate which note index based on beat position
+    // This is approximate - ABCJS doesn't expose exact timing for each element
+    const totalBeats = 16 // Assume 4 bars of 4/4
+    const noteIndex = Math.floor((beatPosition / totalBeats) * notes.length)
     const clampedIndex = Math.min(Math.max(0, noteIndex), notes.length - 1)
     
     const noteEl = notes[clampedIndex]
@@ -76,10 +75,10 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
       noteEl.classList.add('abcjs-note-playing')
       lastHighlightedRef.current = [noteEl]
       
-      // Scroll into view if needed (smooth can be jerky, use auto for faster updates)
-      noteEl.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' })
+      // Scroll into view if needed
+      noteEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
     }
-  }, [clearHighlight, totalBeats])
+  }, [tuneObject, clearHighlight])
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -110,22 +109,15 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
       // Clear previous
       containerRef.current.innerHTML = ''
       
-      // Strip title from ABC notation to avoid rendering it
-      const notationWithoutTitle = notation.replace(/^T:.*$/gm, '')
-      
-      // Calculate width - ensure minimum of 300px
-      const containerWidth = containerRef.current.clientWidth
-      const calculatedWidth = width || Math.max(300, containerWidth - 20)
-      
       // Render ABC notation to SVG
-      const tuneObjects = ABCJS.renderAbc(containerRef.current, notationWithoutTitle, {
+      const tuneObjects = ABCJS.renderAbc(containerRef.current, notation, {
         responsive: responsive ? 'resize' : undefined,
-        staffwidth: calculatedWidth,
+        staffwidth: width || containerRef.current.clientWidth - 20,
         paddingleft: 5,
         paddingright: 5,
         paddingtop: 5,
         paddingbottom: 5,
-        scale: 0.7,
+        scale: 0.75,
         add_classes: true,
         // Drum-friendly colors
         foregroundColor: '#a1a1aa',  // zinc-400 (dimmer for non-playing notes)

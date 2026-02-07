@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Check, X, RotateCcw } from 'lucide-react'
-import { NotationView } from './notation-view'
-import { useAudioPlayer } from './audio-player-context'
+import { Play, Pause, Check, X, RotateCcw, Music } from 'lucide-react'
+import { NotationView, NotationViewHandle } from './notation-view'
+import { usePatternPlayer } from '../audio/use-pattern-player'
 import type { PatternData } from '@radio/shared'
 
 interface Track {
@@ -12,7 +12,6 @@ interface Track {
   instrument: string
   description?: string
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'REVISION'
-  startTimeMs?: number
   durationMs?: number
   signedAudioUrl?: string
   patternData?: PatternData
@@ -33,7 +32,6 @@ interface TrackDetailsProps {
   onAccept?: (trackId: string) => void
   onReject?: (trackId: string) => void
   onRequestRevision?: (trackId: string) => void
-  tempo?: number
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -43,22 +41,59 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   REVISION: { label: 'Revision', color: 'text-orange-400' },
 }
 
-export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRevision, tempo = 120 }: TrackDetailsProps) {
-  const { currentTimeMs, isPlaying, playingTrackIds } = useAudioPlayer()
+export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRevision }: TrackDetailsProps) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const notationRef = useRef<NotationViewHandle>(null)
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const [currentBeat, setCurrentBeat] = useState(0)
+  const patternPlayer = usePatternPlayer()
   
-  // Calculate current beat position relative to this track
-  const trackStartMs = track?.startTimeMs || 0
-  const trackDurationMs = track?.durationMs || 16000 // default 16 beats at 120bpm
-  const msPerBeat = 60000 / tempo
-  const totalBeats = trackDurationMs / msPerBeat
-  
-  // Calculate how far into this track we are (in beats)
-  const timeIntoTrack = currentTimeMs - trackStartMs
-  const isTrackPlaying = isPlaying && timeIntoTrack >= 0 && timeIntoTrack < trackDurationMs
-  const currentBeat = isTrackPlaying ? timeIntoTrack / msPerBeat : 0
-  
-  // Also check if this track is in the playingTrackIds list
-  const isTrackActive = track ? playingTrackIds.includes(track.id) : false
+  const hasPattern = !!track?.patternData
+  const hasAudio = !!track?.signedAudioUrl
+  const canPlay = hasPattern || hasAudio
+  const isPlaying = hasPattern ? patternPlayer.isPlaying : isPlayingAudio
+
+  // Update beat position during playback for notation highlighting
+  useEffect(() => {
+    if (!isPlaying || !hasPattern) return
+    
+    const bpm = 120
+    const beatsPerSecond = bpm / 60
+    const intervalMs = 1000 / (beatsPerSecond * 4) // 16th notes
+    
+    const interval = setInterval(() => {
+      setCurrentBeat(prev => {
+        const next = prev + 0.25
+        return next >= 16 ? 0 : next
+      })
+    }, intervalMs)
+    
+    return () => clearInterval(interval)
+  }, [isPlaying, hasPattern])
+
+  // Reset beat on stop
+  useEffect(() => {
+    if (!isPlaying) {
+      setCurrentBeat(0)
+    }
+  }, [isPlaying])
+
+  const handlePlayPause = async () => {
+    if (!track) return
+    
+    if (hasPattern && track.patternData) {
+      // Use pattern synth
+      await patternPlayer.toggle(track.patternData as PatternData, true)
+    } else if (hasAudio && audioRef.current) {
+      // Use audio element
+      if (isPlayingAudio) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlayingAudio(!isPlayingAudio)
+    }
+  }
 
   if (!track) {
     return (
@@ -73,21 +108,76 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
 
   return (
     <div className="h-full flex flex-col bg-zinc-900/50 rounded-lg border border-zinc-800 overflow-hidden">
-      {/* NOTATION SECTION - Top, no title, synced with timeline */}
+      {/* Hidden audio element for non-pattern tracks */}
+      {hasAudio && !hasPattern && (
+        <audio 
+          ref={audioRef} 
+          src={track.signedAudioUrl} 
+          onEnded={() => setIsPlayingAudio(false)}
+        />
+      )}
+      
+      {/* NOTATION SECTION - Top, no title, highlighted playback */}
       {track.notationAbc && (
         <div className="flex-shrink-0 border-b border-zinc-800">
-          {/* Notation display - no play button, syncs with timeline */}
-          <div className="overflow-x-auto bg-zinc-900/80 px-2 py-1">
+          {/* Play controls inline with notation */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/30">
+            <Button 
+              variant={isPlaying ? "default" : "ghost"} 
+              size="sm" 
+              className="h-7 w-7 p-0"
+              onClick={handlePlayPause}
+              disabled={!canPlay}
+            >
+              {patternPlayer.isLoading ? (
+                <Music className="w-4 h-4 animate-pulse" />
+              ) : isPlaying ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+            </Button>
+            <span className="text-xs text-zinc-400">
+              {isPlaying ? 'Playing...' : hasPattern ? 'Pattern' : 'Audio'}
+            </span>
+            {hasPattern && (
+              <span className="ml-auto text-xs text-green-400 flex items-center gap-1">
+                <Music className="w-3 h-3" /> Synth
+              </span>
+            )}
+          </div>
+          {/* Notation display */}
+          <div className="overflow-x-auto bg-zinc-900/80 px-2">
             <NotationView 
+              ref={notationRef}
               abc={track.notationAbc} 
-              height={80}
+              height={90}
               className="min-w-full"
-              isPlaying={isTrackPlaying || isTrackActive}
+              isPlaying={isPlaying}
               currentBeat={currentBeat}
-              bpm={tempo}
-              totalBeats={totalBeats}
             />
           </div>
+        </div>
+      )}
+      
+      {/* If no notation but has pattern, show compact play button */}
+      {!track.notationAbc && canPlay && (
+        <div className="flex-shrink-0 px-3 py-2 border-b border-zinc-800">
+          <Button 
+            variant={isPlaying ? "default" : "outline"} 
+            size="sm" 
+            className="w-full h-8"
+            onClick={handlePlayPause}
+            disabled={!canPlay}
+          >
+            {patternPlayer.isLoading ? (
+              <><Music className="w-4 h-4 mr-2 animate-pulse" /> Loading...</>
+            ) : isPlaying ? (
+              <><Pause className="w-4 h-4 mr-2" /> Playing...</>
+            ) : (
+              <><Play className="w-4 h-4 mr-2" /> {hasPattern ? 'Play Pattern' : 'Play Track'}</>
+            )}
+          </Button>
         </div>
       )}
       
