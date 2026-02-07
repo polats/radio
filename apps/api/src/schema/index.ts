@@ -1,3 +1,6 @@
+// Initialize base types first
+import './base.js'
+
 import { builder } from './builder.js'
 
 // Import types (order matters for dependencies)
@@ -7,25 +10,21 @@ import './types/track.js'
 import './types/message.js'
 import './types/goldmaster.js'
 
-// Import queries
+// Import queries (these add fields to queryType)
 import './queries/agent.js'
 import './queries/collab.js'
 import './queries/message.js'
 import './queries/feed.js'
 
-// Import mutations
+// Import mutations (these add fields to mutationType)
 import './mutations/auth.js'
 import './mutations/collab.js'
 import './mutations/track.js'
 import './mutations/message.js'
 import './mutations/social.js'
 
-// Import subscriptions (this also builds subscriptionType)
+// Import subscriptions
 import './subscriptions/index.js'
-
-// Build query and mutation types
-builder.queryType({})
-builder.mutationType({})
 
 // Export the schema
 export const schema = builder.toSchema()

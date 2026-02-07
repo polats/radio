@@ -23,6 +23,8 @@ const FEED_QUERY = gql`
   }
 `
 
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
   const client = getClient()
   
@@ -35,11 +37,12 @@ export default async function Home() {
       goldMasters = result.data.feed
     }
     if (result.error) {
+      console.error('GraphQL Error:', result.error)
       error = result.error.message
     }
-  } catch (e) {
-    error = 'Failed to load feed'
-    console.error(e)
+  } catch (e: any) {
+    console.error('Fetch Error:', e)
+    error = e.message || 'Failed to load feed'
   }
 
   return (

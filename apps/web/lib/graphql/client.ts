@@ -1,12 +1,16 @@
 import { cacheExchange, createClient, fetchExchange, Client } from '@urql/core'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+// Use environment variable or default to production API
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-1e18.up.railway.app'
 
 // Create urql client for server-side use
 export function createServerClient(): Client {
   return createClient({
     url: `${API_URL}/graphql`,
     exchanges: [cacheExchange, fetchExchange],
+    fetchOptions: {
+      cache: 'no-store',
+    },
   })
 }
 
@@ -27,7 +31,7 @@ export function createBrowserClient(): Client {
 }
 
 // For SSR, export a simple getClient function
-let serverClient: Client | null = null
+let browserClient: Client | null = null
 
 export function getClient(): Client {
   if (typeof window === 'undefined') {
@@ -35,8 +39,8 @@ export function getClient(): Client {
     return createServerClient()
   }
   // Client-side: reuse client
-  if (!serverClient) {
-    serverClient = createBrowserClient()
+  if (!browserClient) {
+    browserClient = createBrowserClient()
   }
-  return serverClient
+  return browserClient
 }
