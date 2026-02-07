@@ -18,8 +18,8 @@ COPY packages/db/ ./packages/db/
 COPY packages/shared/ ./packages/shared/
 COPY apps/web/ ./apps/web/
 
-# Create public dir if not exists
-RUN mkdir -p /app/apps/web/public
+# Ensure public directory exists
+RUN mkdir -p /app/apps/web/public && touch /app/apps/web/public/.keep
 
 # Build Next.js app
 RUN cd apps/web && pnpm build
@@ -31,8 +31,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy standalone build
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+
+# Copy public folder (now guaranteed to exist)
 COPY --from=builder /app/apps/web/public ./apps/web/public
 
 ENV PORT=3000
