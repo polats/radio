@@ -6,139 +6,290 @@ interface Track {
   id: string
   instrument: string
   signedAudioUrl?: string
-  durationMs?: number
+  startTimeMs: number
+  durationMs: number
+}
+
+interface TrackAudio {
+  audio: HTMLAudioElement
+  track: Track
+  loaded: boolean
 }
 
 interface AudioPlayerContextType {
-  currentTrack: Track | null
+  // Timeline state
   isPlaying: boolean
   currentTimeMs: number
-  durationMs: number
+  totalDurationMs: number
   volume: number
-  playTrack: (track: Track) => void
+  
+  // Track state
+  playingTrackIds: string[]
+  soloTrackId: string | null
+  mutedTrackIds: string[]
+  
+  // Timeline controls
+  play: () => void
   pause: () => void
-  resume: () => void
   stop: () => void
   seek: (timeMs: number) => void
   setVolume: (volume: number) => void
+  
+  // Track controls
+  setSoloTrack: (trackId: string | null) => void
+  toggleMuteTrack: (trackId: string) => void
+  playTrackSolo: (track: Track) => void
+  
+  // Setup
+  setTracks: (tracks: Track[]) => void
+  setTotalDuration: (durationMs: number) => void
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | null>(null)
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
+  const trackAudiosRef = useRef<Map<string, TrackAudio>>(new Map())
+  const animationRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number>(0)
+  
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTimeMs, setCurrentTimeMs] = useState(0)
-  const [durationMs, setDurationMs] = useState(0)
+  const [totalDurationMs, setTotalDurationMs] = useState(180000) // 3 min default
   const [volume, setVolumeState] = useState(0.8)
+  const [playingTrackIds, setPlayingTrackIds] = useState<string[]>([])
+  const [soloTrackId, setSoloTrackIdState] = useState<string | null>(null)
+  const [mutedTrackIds, setMutedTrackIds] = useState<string[]>([])
+  const [tracks, setTracksState] = useState<Track[]>([])
 
-  // Create audio element on mount
+  // Sync tracks with audio elements
+  const setTracks = useCallback((newTracks: Track[]) => {
+    setTracksState(newTracks)
+    
+    // Create/update audio elements for each track
+    const currentMap = trackAudiosRef.current
+    const newTrackIds = new Set(newTracks.map(t => t.id))
+    
+    // Remove old tracks
+    for (const [id] of currentMap) {
+      if (!newTrackIds.has(id)) {
+        const ta = currentMap.get(id)
+        if (ta) {
+          ta.audio.pause()
+          ta.audio.src = ''
+        }
+        currentMap.delete(id)
+      }
+    }
+    
+    // Add/update tracks
+    for (const track of newTracks) {
+      if (track.signedAudioUrl) {
+        let ta = currentMap.get(track.id)
+        if (!ta) {
+          const audio = new Audio()
+          audio.preload = 'auto'
+          audio.volume = volume
+          ta = { audio, track, loaded: false }
+          currentMap.set(track.id, ta)
+          
+          audio.addEventListener('canplaythrough', () => {
+            const existing = currentMap.get(track.id)
+            if (existing) existing.loaded = true
+          })
+        }
+        
+        // Update source if changed
+        if (ta.audio.src !== track.signedAudioUrl) {
+          ta.audio.src = track.signedAudioUrl
+          ta.audio.load()
+          ta.loaded = false
+        }
+        ta.track = track
+      }
+    }
+  }, [volume])
+
+  const setTotalDuration = useCallback((durationMs: number) => {
+    setTotalDurationMs(durationMs)
+  }, [])
+
+  // Animation loop for playback
+  const tick = useCallback((timestamp: number) => {
+    if (!lastTimeRef.current) lastTimeRef.current = timestamp
+    const delta = timestamp - lastTimeRef.current
+    lastTimeRef.current = timestamp
+    
+    setCurrentTimeMs(prev => {
+      const next = prev + delta
+      if (next >= totalDurationMs) {
+        // Stop at end
+        setIsPlaying(false)
+        stopAllTracks()
+        return totalDurationMs
+      }
+      return next
+    })
+    
+    if (isPlaying) {
+      animationRef.current = requestAnimationFrame(tick)
+    }
+  }, [isPlaying, totalDurationMs])
+
+  // Sync track playback with current time
   useEffect(() => {
-    audioRef.current = new Audio()
-    audioRef.current.volume = volume
+    if (!isPlaying) return
     
-    const audio = audioRef.current
+    const playing: string[] = []
     
-    const handleTimeUpdate = () => {
-      setCurrentTimeMs(audio.currentTime * 1000)
+    for (const [id, ta] of trackAudiosRef.current) {
+      const { track, audio, loaded } = ta
+      if (!loaded || !track.signedAudioUrl) continue
+      
+      // Check if track should be playing
+      const trackStart = track.startTimeMs
+      const trackEnd = trackStart + track.durationMs
+      const shouldPlay = currentTimeMs >= trackStart && currentTimeMs < trackEnd
+      
+      // Check mute/solo
+      const isMuted = mutedTrackIds.includes(id)
+      const isSoloed = soloTrackId === null || soloTrackId === id
+      const audible = !isMuted && isSoloed
+      
+      if (shouldPlay && audible) {
+        // Calculate where in the track we should be
+        const trackPosition = (currentTimeMs - trackStart) / 1000
+        
+        // Start playing if not already
+        if (audio.paused) {
+          audio.currentTime = trackPosition
+          audio.play().catch(() => {})
+        } else {
+          // Sync if drifted more than 100ms
+          const drift = Math.abs(audio.currentTime - trackPosition)
+          if (drift > 0.1) {
+            audio.currentTime = trackPosition
+          }
+        }
+        playing.push(id)
+      } else {
+        // Stop if shouldn't be playing
+        if (!audio.paused) {
+          audio.pause()
+        }
+      }
     }
     
-    const handleLoadedMetadata = () => {
-      setDurationMs(audio.duration * 1000)
+    setPlayingTrackIds(playing)
+  }, [currentTimeMs, isPlaying, mutedTrackIds, soloTrackId])
+
+  // Start animation when playing
+  useEffect(() => {
+    if (isPlaying) {
+      lastTimeRef.current = 0
+      animationRef.current = requestAnimationFrame(tick)
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
     }
-    
-    const handleEnded = () => {
-      setIsPlaying(false)
-      setCurrentTimeMs(0)
-    }
-    
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
-    
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-    audio.addEventListener('ended', handleEnded)
-    audio.addEventListener('play', handlePlay)
-    audio.addEventListener('pause', handlePause)
     
     return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.removeEventListener('ended', handleEnded)
-      audio.removeEventListener('play', handlePlay)
-      audio.removeEventListener('pause', handlePause)
-      audio.pause()
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
     }
+  }, [isPlaying, tick])
+
+  const stopAllTracks = useCallback(() => {
+    for (const [, ta] of trackAudiosRef.current) {
+      ta.audio.pause()
+    }
+    setPlayingTrackIds([])
   }, [])
 
-  const playTrack = useCallback((track: Track) => {
-    if (!audioRef.current || !track.signedAudioUrl) return
-    
-    // If same track, just resume
-    if (currentTrack?.id === track.id && audioRef.current.src) {
-      audioRef.current.play()
-      return
-    }
-    
-    // Load new track
-    audioRef.current.src = track.signedAudioUrl
-    audioRef.current.load()
-    setCurrentTrack(track)
-    setCurrentTimeMs(0)
-    
-    // Set duration from track if available
-    if (track.durationMs) {
-      setDurationMs(track.durationMs)
-    }
-    
-    audioRef.current.play()
-  }, [currentTrack])
+  const play = useCallback(() => {
+    setIsPlaying(true)
+  }, [])
 
   const pause = useCallback(() => {
-    audioRef.current?.pause()
-  }, [])
-
-  const resume = useCallback(() => {
-    audioRef.current?.play()
-  }, [])
+    setIsPlaying(false)
+    stopAllTracks()
+  }, [stopAllTracks])
 
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-    }
-    setCurrentTimeMs(0)
     setIsPlaying(false)
-  }, [])
+    setCurrentTimeMs(0)
+    stopAllTracks()
+  }, [stopAllTracks])
 
   const seek = useCallback((timeMs: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = timeMs / 1000
-      setCurrentTimeMs(timeMs)
+    setCurrentTimeMs(Math.max(0, Math.min(timeMs, totalDurationMs)))
+    // Reset all track positions
+    for (const [, ta] of trackAudiosRef.current) {
+      const trackPos = (timeMs - ta.track.startTimeMs) / 1000
+      if (trackPos >= 0 && trackPos < ta.track.durationMs / 1000) {
+        ta.audio.currentTime = trackPos
+      } else {
+        ta.audio.pause()
+        ta.audio.currentTime = 0
+      }
     }
-  }, [])
+  }, [totalDurationMs])
 
   const setVolume = useCallback((vol: number) => {
     setVolumeState(vol)
-    if (audioRef.current) {
-      audioRef.current.volume = vol
+    for (const [, ta] of trackAudiosRef.current) {
+      ta.audio.volume = vol
     }
   }, [])
 
+  const setSoloTrack = useCallback((trackId: string | null) => {
+    setSoloTrackIdState(trackId)
+  }, [])
+
+  const toggleMuteTrack = useCallback((trackId: string) => {
+    setMutedTrackIds(prev => 
+      prev.includes(trackId) 
+        ? prev.filter(id => id !== trackId)
+        : [...prev, trackId]
+    )
+  }, [])
+
+  // Play a single track in isolation (solo mode)
+  const playTrackSolo = useCallback((track: Track) => {
+    // Stop everything
+    stopAllTracks()
+    setIsPlaying(false)
+    
+    // Seek to track start and play
+    setCurrentTimeMs(track.startTimeMs)
+    setSoloTrackIdState(track.id)
+    
+    // Small delay then play
+    setTimeout(() => {
+      setIsPlaying(true)
+    }, 50)
+  }, [stopAllTracks])
+
   return (
     <AudioPlayerContext.Provider value={{
-      currentTrack,
       isPlaying,
       currentTimeMs,
-      durationMs,
+      totalDurationMs,
       volume,
-      playTrack,
+      playingTrackIds,
+      soloTrackId,
+      mutedTrackIds,
+      play,
       pause,
-      resume,
       stop,
       seek,
       setVolume,
+      setSoloTrack,
+      toggleMuteTrack,
+      playTrackSolo,
+      setTracks,
+      setTotalDuration,
     }}>
       {children}
     </AudioPlayerContext.Provider>

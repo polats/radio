@@ -1,6 +1,6 @@
 'use client'
 
-import { Play, Pause } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import { Waveform } from './waveform'
 import { useAudioPlayer } from './audio-player-context'
 
@@ -55,36 +55,44 @@ export function TrackLane({
   isSelected, 
   onSelect,
   compact = false,
-  labelWidth = 128,
+  labelWidth = 140,
   statusWidth = 40,
 }: TrackLaneProps) {
-  const { currentTrack, isPlaying, playTrack, pause } = useAudioPlayer()
+  const { 
+    playingTrackIds, 
+    mutedTrackIds, 
+    soloTrackId,
+    playTrackSolo, 
+    toggleMuteTrack,
+    isPlaying: timelinePlaying,
+  } = useAudioPlayer()
   
   const left = (track.startTimeMs / 1000) * pixelsPerSecond
   const width = (track.durationMs / 1000) * pixelsPerSecond
   const height = compact ? 48 : 56
   const waveformHeight = compact ? 36 : 44
   
-  const isCurrentTrack = currentTrack?.id === track.id
-  const isThisPlaying = isCurrentTrack && isPlaying
+  const isThisPlaying = playingTrackIds.includes(track.id)
+  const isMuted = mutedTrackIds.includes(track.id)
+  const isSoloed = soloTrackId === track.id
   const hasAudio = !!track.signedAudioUrl
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!hasAudio) return
-    
-    if (isThisPlaying) {
-      pause()
-    } else {
-      playTrack(track)
-    }
+    playTrackSolo(track)
+  }
+
+  const handleMuteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleMuteTrack(track.id)
   }
 
   return (
     <div 
       className={`flex items-center border-b border-zinc-800 cursor-pointer transition-colors ${
         isSelected ? 'bg-zinc-800/50' : 'hover:bg-zinc-900/50'
-      } ${isCurrentTrack ? 'ring-1 ring-inset ring-green-500/50' : ''}`}
+      } ${isThisPlaying ? 'ring-1 ring-inset ring-green-500/50' : ''}`}
       style={{ height }}
       onClick={onSelect}
     >
@@ -101,14 +109,37 @@ export function TrackLane({
             hasAudio 
               ? isThisPlaying 
                 ? 'bg-green-500 text-white' 
-                : 'bg-zinc-700 hover:bg-zinc-600 text-white'
+                : isSoloed
+                  ? 'bg-green-700 text-white'
+                  : 'bg-zinc-700 hover:bg-zinc-600 text-white'
               : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
           }`}
+          title={isThisPlaying ? 'Playing' : 'Solo this track'}
         >
-          {isThisPlaying ? (
+          {isThisPlaying && timelinePlaying ? (
             <Pause className="w-3 h-3" />
           ) : (
             <Play className="w-3 h-3 ml-0.5" />
+          )}
+        </button>
+        
+        {/* Mute button */}
+        <button
+          onClick={handleMuteClick}
+          disabled={!hasAudio}
+          className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center transition-colors ${
+            hasAudio 
+              ? isMuted
+                ? 'bg-red-600 text-white'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'
+              : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'
+          }`}
+          title={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? (
+            <VolumeX className="w-3 h-3" />
+          ) : (
+            <Volume2 className="w-3 h-3" />
           )}
         </button>
         
@@ -125,14 +156,20 @@ export function TrackLane({
       {/* Waveform area */}
       <div className="flex-1 relative h-full">
         <div
-          className={`absolute top-1 bottom-1 rounded ${isThisPlaying ? 'bg-green-900/30' : 'bg-zinc-800/50'}`}
+          className={`absolute top-1 bottom-1 rounded transition-colors ${
+            isThisPlaying 
+              ? 'bg-green-900/40' 
+              : isMuted 
+                ? 'bg-zinc-900/50' 
+                : 'bg-zinc-800/50'
+          }`}
           style={{ left, width: Math.max(width, 20) }}
         >
           <Waveform 
             data={track.waveformData} 
             width={Math.max(width - 8, 20)} 
             height={waveformHeight}
-            color={isThisPlaying ? '#22c55e' : waveformColors[track.status]}
+            color={isMuted ? '#52525b' : isThisPlaying ? '#22c55e' : waveformColors[track.status]}
             className="mx-1"
           />
         </div>

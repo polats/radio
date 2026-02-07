@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Play, Pause, Square, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, Square, Volume2, VolumeX, SkipBack } from 'lucide-react'
 import { useAudioPlayer } from './audio-player-context'
 
 interface TransportControlsProps {
@@ -10,28 +10,31 @@ interface TransportControlsProps {
 
 export function TransportControls({ compact = false }: TransportControlsProps) {
   const { 
-    currentTrack, 
     isPlaying, 
     currentTimeMs, 
-    durationMs, 
+    totalDurationMs, 
     volume,
-    resume, 
+    playingTrackIds,
+    soloTrackId,
+    play, 
     pause, 
     stop, 
     seek,
     setVolume,
+    setSoloTrack,
   } = useAudioPlayer()
   
-  const progress = durationMs > 0 ? (currentTimeMs / durationMs) * 100 : 0
+  const progress = totalDurationMs > 0 ? (currentTimeMs / totalDurationMs) * 100 : 0
   const currentTime = formatTime(currentTimeMs / 1000)
-  const totalTime = formatTime(durationMs / 1000)
+  const totalTime = formatTime(totalDurationMs / 1000)
   const isMuted = volume === 0
+  const trackCount = playingTrackIds.length
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percent = x / rect.width
-    seek(percent * durationMs)
+    seek(percent * totalDurationMs)
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,6 +45,10 @@ export function TransportControls({ compact = false }: TransportControlsProps) {
     setVolume(isMuted ? 0.8 : 0)
   }
 
+  const handleClearSolo = () => {
+    setSoloTrack(null)
+  }
+
   return (
     <div className={`flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 sm:py-3 bg-zinc-900 border-t border-zinc-800 ${compact ? 'flex-wrap' : ''}`}>
       {/* Play/Pause/Stop */}
@@ -50,8 +57,16 @@ export function TransportControls({ compact = false }: TransportControlsProps) {
           variant="ghost"
           size="sm"
           className={compact ? 'w-8 h-8' : 'w-10 h-10 rounded-full'}
-          onClick={isPlaying ? pause : resume}
-          disabled={!currentTrack}
+          onClick={() => seek(0)}
+          title="Back to start"
+        >
+          <SkipBack className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`${compact ? 'w-8 h-8' : 'w-10 h-10 rounded-full'} ${isPlaying ? 'bg-green-600 hover:bg-green-700' : ''}`}
+          onClick={isPlaying ? pause : play}
         >
           {isPlaying ? (
             <Pause className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
@@ -64,18 +79,27 @@ export function TransportControls({ compact = false }: TransportControlsProps) {
           size="sm"
           className={compact ? 'w-8 h-8' : 'w-8 h-8'}
           onClick={stop}
-          disabled={!currentTrack}
         >
           <Square className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
         </Button>
       </div>
 
-      {/* Current track name */}
-      {currentTrack && (
-        <div className={`text-zinc-300 truncate ${compact ? 'text-xs max-w-[80px]' : 'text-sm max-w-[120px]'}`}>
-          🎵 {currentTrack.instrument}
-        </div>
-      )}
+      {/* Playing info */}
+      <div className={`flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+        {trackCount > 0 && (
+          <span className="text-green-400">
+            🎵 {trackCount} track{trackCount !== 1 ? 's' : ''}
+          </span>
+        )}
+        {soloTrackId && (
+          <button 
+            onClick={handleClearSolo}
+            className="text-yellow-400 hover:text-yellow-300 text-xs"
+          >
+            [Solo] ✕
+          </button>
+        )}
+      </div>
 
       {/* Time display */}
       <div className={`font-mono text-zinc-400 ${compact ? 'text-xs w-20' : 'text-sm w-24'}`}>
@@ -88,10 +112,12 @@ export function TransportControls({ compact = false }: TransportControlsProps) {
         onClick={handleProgressClick}
       >
         <div 
-          className="h-full bg-white rounded-full relative transition-all group-hover:bg-green-500"
+          className={`h-full rounded-full relative transition-all ${
+            isPlaying ? 'bg-green-500' : 'bg-white'
+          } group-hover:bg-green-400`}
           style={{ width: `${progress}%` }}
         >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
         </div>
       </div>
 

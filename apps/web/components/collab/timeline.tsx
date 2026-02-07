@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TimelineRuler } from './timeline-ruler'
 import { SectionMarkers } from './section-markers'
 import { TrackLane } from './track-lane'
 import { TransportControls } from './transport-controls'
+import { useAudioPlayer } from './audio-player-context'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -52,22 +53,52 @@ export function Timeline({
   onAddTrack,
 }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const { setTracks, setTotalDuration, currentTimeMs, isPlaying } = useAudioPlayer()
   
   // Use smaller scale on mobile
   const [isMobile, setIsMobile] = useState(false)
   
   // Check on mount (client-side only)
-  if (typeof window !== 'undefined' && !isMobile && window.innerWidth < 768) {
-    setIsMobile(true)
-  }
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setIsMobile(true)
+    }
+  }, [])
+  
+  // Sync tracks with audio player
+  useEffect(() => {
+    setTracks(tracks)
+    setTotalDuration(durationMs)
+  }, [tracks, durationMs, setTracks, setTotalDuration])
+  
+  // Auto-scroll to keep playhead visible
+  useEffect(() => {
+    if (!isPlaying || !scrollRef.current) return
+    
+    const pixelsPerSecond = isMobile ? PIXELS_PER_SECOND_MOBILE : PIXELS_PER_SECOND_DESKTOP
+    const labelWidth = isMobile ? 100 : 140
+    const playheadX = labelWidth + (currentTimeMs / 1000) * pixelsPerSecond
+    
+    const container = scrollRef.current
+    const containerWidth = container.clientWidth
+    const scrollLeft = container.scrollLeft
+    
+    // If playhead is near right edge, scroll to keep it visible
+    if (playheadX > scrollLeft + containerWidth - 100) {
+      container.scrollLeft = playheadX - containerWidth / 2
+    }
+  }, [currentTimeMs, isPlaying, isMobile])
   
   const pixelsPerSecond = isMobile ? PIXELS_PER_SECOND_MOBILE : PIXELS_PER_SECOND_DESKTOP
-  const labelWidth = isMobile ? 100 : 140  // Wider for play button
+  const labelWidth = isMobile ? 100 : 140
   const statusWidth = isMobile ? 32 : 40
 
   const timelineWidth = (durationMs / 1000) * pixelsPerSecond
   const trackHeight = isMobile ? 48 : 56
   const trackAreaHeight = Math.max(tracks.length * trackHeight + trackHeight, 150)
+  
+  // Playhead position
+  const playheadX = labelWidth + (currentTimeMs / 1000) * pixelsPerSecond
 
   return (
     <div className="flex flex-col bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden h-full">
@@ -102,6 +133,17 @@ export function Timeline({
                 pixelsPerSecond={pixelsPerSecond} 
                 height={trackAreaHeight}
               />
+            </div>
+            
+            {/* Playhead */}
+            <div 
+              className={`absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none transition-colors ${
+                isPlaying ? 'bg-red-500' : 'bg-red-500/50'
+              }`}
+              style={{ left: playheadX }}
+            >
+              {/* Playhead handle */}
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full" />
             </div>
             
             {/* Track lanes */}
