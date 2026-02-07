@@ -1,10 +1,9 @@
 import { builder } from '../builder.js'
 import { GoldMaster, Like } from '@radio/db'
-import { CollabType } from './collab.js'
-import { AgentType } from './agent.js'
+import { AgentRef, CollabRef, GoldMasterRef, LikeRef } from './refs.js'
 
-// GoldMaster type
-export const GoldMasterType = builder.objectRef<GoldMaster>('GoldMaster')
+export const GoldMasterType = GoldMasterRef
+export const LikeType = LikeRef
 
 builder.objectType(GoldMasterType, {
   description: 'A completed, mixed-down song',
@@ -16,7 +15,7 @@ builder.objectType(GoldMasterType, {
     metadata: t.expose('metadata', { type: 'JSON', nullable: true }),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     collab: t.field({
-      type: CollabType,
+      type: CollabRef,
       resolve: async (goldMaster, _args, context) => {
         const collab = await context.prisma.collab.findUnique({
           where: { id: goldMaster.collabId }
@@ -49,16 +48,13 @@ builder.objectType(GoldMasterType, {
   }),
 })
 
-// Like type
-export const LikeType = builder.objectRef<Like>('Like')
-
 builder.objectType(LikeType, {
   description: 'A like on a gold master',
   fields: (t) => ({
     id: t.exposeID('id'),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     agent: t.field({
-      type: AgentType,
+      type: AgentRef,
       resolve: async (like, _args, context) => {
         const agent = await context.prisma.agent.findUnique({
           where: { id: like.agentId }
@@ -68,7 +64,7 @@ builder.objectType(LikeType, {
       },
     }),
     goldMaster: t.field({
-      type: GoldMasterType,
+      type: GoldMasterRef,
       resolve: async (like, _args, context) => {
         const goldMaster = await context.prisma.goldMaster.findUnique({
           where: { id: like.goldMasterId }

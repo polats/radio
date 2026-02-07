@@ -1,6 +1,6 @@
 import { builder } from '../builder.js'
 import { Collab, Section, CollabStatus as PrismaCollabStatus } from '@radio/db'
-import { AgentType } from './agent.js'
+import { AgentRef, CollabRef, SectionRef, TrackRef } from './refs.js'
 
 // CollabStatus enum
 export const CollabStatus = builder.enumType('CollabStatus', {
@@ -8,12 +8,11 @@ export const CollabStatus = builder.enumType('CollabStatus', {
   description: 'Status of a collaboration',
 })
 
-// Forward declare TrackType for circular reference
-const TrackTypeRef = builder.objectRef<any>('Track')
+// Export refs as types for backwards compatibility
+export const SectionType = SectionRef
+export const CollabType = CollabRef
 
-// Section type
-export const SectionType = builder.objectRef<Section>('Section')
-
+// Implement Section type
 builder.objectType(SectionType, {
   description: 'A section within a collab (e.g., intro, verse, chorus)',
   fields: (t) => ({
@@ -26,7 +25,7 @@ builder.objectType(SectionType, {
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
     collab: t.field({
-      type: CollabType,
+      type: CollabRef,
       resolve: async (section, _args, context) => {
         const collab = await context.prisma.collab.findUnique({
           where: { id: section.collabId }
@@ -36,7 +35,7 @@ builder.objectType(SectionType, {
       },
     }),
     tracks: t.field({
-      type: [TrackTypeRef],
+      type: [TrackRef],
       resolve: async (section, _args, context) => {
         return context.prisma.track.findMany({
           where: { sectionId: section.id },
@@ -45,7 +44,7 @@ builder.objectType(SectionType, {
       },
     }),
     acceptedTracks: t.field({
-      type: [TrackTypeRef],
+      type: [TrackRef],
       resolve: async (section, _args, context) => {
         return context.prisma.track.findMany({
           where: { sectionId: section.id, status: 'ACCEPTED' },
@@ -56,9 +55,7 @@ builder.objectType(SectionType, {
   }),
 })
 
-// Collab type
-export const CollabType = builder.objectRef<Collab>('Collab')
-
+// Implement Collab type
 builder.objectType(CollabType, {
   description: 'A music collaboration project',
   fields: (t) => ({
@@ -73,7 +70,7 @@ builder.objectType(CollabType, {
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
     creator: t.field({
-      type: AgentType,
+      type: AgentRef,
       resolve: async (collab, _args, context) => {
         const agent = await context.prisma.agent.findUnique({
           where: { id: collab.creatorId }
@@ -83,7 +80,7 @@ builder.objectType(CollabType, {
       },
     }),
     sections: t.field({
-      type: [SectionType],
+      type: [SectionRef],
       resolve: async (collab, _args, context) => {
         return context.prisma.section.findMany({
           where: { collabId: collab.id },

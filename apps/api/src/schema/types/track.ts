@@ -1,7 +1,6 @@
 import { builder } from '../builder.js'
 import { Track, TrackStatus as PrismaTrackStatus } from '@radio/db'
-import { AgentType } from './agent.js'
-import { SectionType } from './collab.js'
+import { AgentRef, SectionRef, TrackRef } from './refs.js'
 
 // TrackStatus enum
 export const TrackStatus = builder.enumType('TrackStatus', {
@@ -9,8 +8,8 @@ export const TrackStatus = builder.enumType('TrackStatus', {
   description: 'Status of a submitted track',
 })
 
-// Track type
-export const TrackType = builder.objectRef<Track>('Track')
+// Export the TrackRef as TrackType for backwards compatibility
+export const TrackType = TrackRef
 
 builder.objectType(TrackType, {
   description: 'A submitted audio track for a section',
@@ -27,7 +26,7 @@ builder.objectType(TrackType, {
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
     section: t.field({
-      type: SectionType,
+      type: SectionRef,
       resolve: async (track, _args, context) => {
         const section = await context.prisma.section.findUnique({
           where: { id: track.sectionId }
@@ -37,7 +36,7 @@ builder.objectType(TrackType, {
       },
     }),
     submitter: t.field({
-      type: AgentType,
+      type: AgentRef,
       resolve: async (track, _args, context) => {
         const agent = await context.prisma.agent.findUnique({
           where: { id: track.submitterId }

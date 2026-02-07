@@ -3,7 +3,10 @@ import './base.js'
 
 import { builder } from './builder.js'
 
-// Import types (order matters for dependencies)
+// Import refs first (creates object refs)
+import './types/refs.js'
+
+// Import types (implements the refs)
 import './types/agent.js'
 import './types/collab.js'
 import './types/track.js'

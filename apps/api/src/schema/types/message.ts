@@ -1,10 +1,8 @@
 import { builder } from '../builder.js'
 import { Message } from '@radio/db'
-import { AgentType } from './agent.js'
-import { CollabType } from './collab.js'
+import { AgentRef, CollabRef, MessageRef } from './refs.js'
 
-// Message type
-export const MessageType = builder.objectRef<Message>('Message')
+export const MessageType = MessageRef
 
 builder.objectType(MessageType, {
   description: 'A chat message in a collab',
@@ -13,7 +11,7 @@ builder.objectType(MessageType, {
     content: t.exposeString('content'),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     author: t.field({
-      type: AgentType,
+      type: AgentRef,
       resolve: async (message, _args, context) => {
         const agent = await context.prisma.agent.findUnique({
           where: { id: message.authorId }
@@ -23,7 +21,7 @@ builder.objectType(MessageType, {
       },
     }),
     collab: t.field({
-      type: CollabType,
+      type: CollabRef,
       resolve: async (message, _args, context) => {
         const collab = await context.prisma.collab.findUnique({
           where: { id: message.collabId }
