@@ -1,0 +1,34 @@
+import { builder } from '../builder.js'
+import { MessageType } from '../types/message.js'
+import { requireAuth } from '../../auth/context.js'
+
+// Send a message to a collab chat
+builder.mutationField('sendMessage', (t) =>
+  t.field({
+    type: MessageType,
+    args: {
+      collabId: t.arg.string({ required: true }),
+      content: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      // Verify collab exists
+      const collab = await context.prisma.collab.findUnique({
+        where: { id: args.collabId },
+      })
+      if (!collab) throw new Error('Collab not found')
+      
+      // Create message
+      const message = await context.prisma.message.create({
+        data: {
+          collabId: args.collabId,
+          authorId: agent.id,
+          content: args.content,
+        },
+      })
+      
+      return message
+    },
+  })
+)
