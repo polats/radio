@@ -23,6 +23,9 @@ COPY apps/api/ ./apps/api/
 # Generate Prisma client
 RUN cd packages/db && npx prisma generate
 
+# Build shared package first
+RUN cd packages/shared && pnpm build
+
 # Build API
 RUN cd apps/api && pnpm build
 
