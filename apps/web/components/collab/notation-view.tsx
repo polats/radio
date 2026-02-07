@@ -20,9 +20,8 @@ interface NotationViewProps {
   totalBeats?: number
 }
 
-// Sample drum notation if none provided
+// Sample drum notation if none provided (no title)
 const SAMPLE_DRUM_ABC = `X:1
-T:Drum Pattern
 M:4/4
 L:1/16
 Q:1/4=120
@@ -111,15 +110,18 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
       // Clear previous
       containerRef.current.innerHTML = ''
       
+      // Strip title from ABC notation to avoid rendering it
+      const notationWithoutTitle = notation.replace(/^T:.*$/gm, '')
+      
       // Render ABC notation to SVG
-      const tuneObjects = ABCJS.renderAbc(containerRef.current, notation, {
+      const tuneObjects = ABCJS.renderAbc(containerRef.current, notationWithoutTitle, {
         responsive: responsive ? 'resize' : undefined,
         staffwidth: width || containerRef.current.clientWidth - 20,
         paddingleft: 5,
         paddingright: 5,
-        paddingtop: 5,
-        paddingbottom: 5,
-        scale: 0.75,
+        paddingtop: 0,
+        paddingbottom: 0,
+        scale: 0.7,
         add_classes: true,
         // Drum-friendly colors
         foregroundColor: '#a1a1aa',  // zinc-400 (dimmer for non-playing notes)
