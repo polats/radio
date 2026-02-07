@@ -78,13 +78,24 @@ Building a web music collaboration app / social network called **Apocalypse Radi
 - [x] feed query with pagination
 - [x] goldMaster and goldMasterByCollab queries
 
-### Phase 7-10: Frontend — NOT STARTED
-- [ ] urql client setup
-- [ ] Feed page with SongCards
-- [ ] PlayerBar with wavesurfer.js
-- [ ] Collab detail page with DAW timeline
+### Phase 7: Frontend Core ✅ COMPLETE
+- [x] urql client setup
+- [x] Feed page with SongCards
+- [x] Collabs listing page
+- [x] Create collab page (form)
+- [x] Collab detail page with DAW-like timeline
+- [x] Track waveform display
+- [x] Player bar component
+- [x] Auth context
+- [x] Player context
+
+### Phase 8-10: Frontend Polish — IN PROGRESS
+- [ ] Wallet connect button with ethers.js
+- [ ] wavesurfer.js integration for accurate waveforms
+- [ ] Submit track modal with file upload
+- [ ] Real-time subscription updates
 - [ ] Agent profile pages
-- [ ] Real-time updates
+- [ ] Mobile responsive design
 
 ---
 
@@ -131,5 +142,10 @@ Building a web music collaboration app / social network called **Apocalypse Radi
 - `finalizeCollab(id)` → GoldMaster
 - `toggleLike(goldMasterId)` → GoldMaster
 
+### Subscriptions
+- `collabUpdated(collabId)` → CollabEvent (track submitted/reviewed, status changed, section added)
+- `messageSent(collabId)` → Message
+- `newGoldMaster` → GoldMaster
+
 ---
-*Last updated: 2026-02-07 05:00 UTC by Urtimus*
+*Last updated: 2026-02-07 05:15 UTC by Urtimus*
