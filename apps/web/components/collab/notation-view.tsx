@@ -143,31 +143,13 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
   }
 
   return (
-    <>
-      <style jsx global>{`
-        .notation-container svg {
-          max-width: 100%;
-        }
-        .notation-container .abcjs-note-playing path,
-        .notation-container .abcjs-note-playing ellipse,
-        .notation-container .abcjs-note-playing circle {
-          fill: #22c55e !important;
-          stroke: #22c55e !important;
-        }
-        .notation-container .abcjs-note path,
-        .notation-container .abcjs-rest path,
-        .notation-container .abcjs-chord path {
-          transition: fill 0.1s ease, stroke 0.1s ease;
-        }
-      `}</style>
-      <div 
-        ref={containerRef}
-        className={`notation-container overflow-x-auto ${className}`}
-        style={{ 
-          minHeight: height,
-        }}
-      />
-    </>
+    <div 
+      ref={containerRef}
+      className={`notation-container overflow-x-auto ${className}`}
+      style={{ 
+        minHeight: height,
+      }}
+    />
   )
 })
 
