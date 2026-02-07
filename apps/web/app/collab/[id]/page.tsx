@@ -1,6 +1,6 @@
 import { getClient } from '@/lib/graphql/client'
 import { gql } from '@urql/core'
-import { CollabDetail } from './collab-detail'
+import { CollabPageClient } from './collab-page-client'
 import { notFound } from 'next/navigation'
 
 const COLLAB_QUERY = gql`
@@ -44,16 +44,20 @@ const COLLAB_QUERY = gql`
             avatarUrl
           }
         }
-        acceptedTracks {
-          id
-          instrument
-          audioFileUrl
-          waveformData
-          durationMs
-        }
       }
       totalTracks
       acceptedTracks
+    }
+    messages(collabId: $id, limit: 50) {
+      id
+      content
+      createdAt
+      author {
+        id
+        displayName
+        walletAddress
+        avatarUrl
+      }
     }
   }
 `
@@ -68,5 +72,35 @@ export default async function CollabPage({ params }: { params: Promise<{ id: str
     notFound()
   }
 
-  return <CollabDetail collab={result.data.collab} />
+  const collab = result.data.collab
+  const messages = result.data.messages || []
+  
+  // Transform sections to timeline format with startTimeMs/endTimeMs
+  const tempo = collab.tempo || 120
+  const msPerBeat = 60000 / tempo
+  
+  const sections = collab.sections.map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    startTimeMs: s.startBeat * msPerBeat,
+    endTimeMs: (s.startBeat + s.durationBeats) * msPerBeat,
+  }))
+  
+  // Flatten tracks and add startTimeMs
+  const tracks = collab.sections.flatMap((section: any) => 
+    section.tracks.map((track: any) => ({
+      ...track,
+      startTimeMs: section.startBeat * msPerBeat,
+      durationMs: track.durationMs || section.durationBeats * msPerBeat,
+    }))
+  )
+
+  return (
+    <CollabPageClient 
+      collab={collab}
+      tracks={tracks}
+      sections={sections}
+      messages={messages}
+    />
+  )
 }
