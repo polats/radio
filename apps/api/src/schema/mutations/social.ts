@@ -3,6 +3,7 @@ import { GoldMasterType } from '../types/goldmaster.js'
 import { CollabType } from '../types/collab.js'
 import { requireAuth } from '../../auth/context.js'
 import { mixdownTracks } from '../../audio/mixdown.js'
+import { publishCollabEvent, publishNewGoldMaster } from '../../pubsub.js'
 
 // Finalize a collab - create Gold Master
 builder.mutationField('finalizeCollab', (t) =>
@@ -14,7 +15,6 @@ builder.mutationField('finalizeCollab', (t) =>
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
       
-      // Get collab with sections and accepted tracks
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.id },
         include: {
@@ -33,7 +33,6 @@ builder.mutationField('finalizeCollab', (t) =>
       if (collab.status === 'COMPLETED') throw new Error('Collab already finalized')
       if (collab.status === 'MIXING') throw new Error('Collab is already being mixed')
       
-      // Get all accepted tracks
       const acceptedTracks = collab.sections.flatMap(s => 
         s.tracks.map(t => ({ ...t, section: s }))
       )
@@ -43,28 +42,26 @@ builder.mutationField('finalizeCollab', (t) =>
       }
       
       // Set status to MIXING
-      await context.prisma.collab.update({
+      const mixingCollab = await context.prisma.collab.update({
         where: { id: args.id },
         data: { status: 'MIXING' },
       })
+      publishCollabEvent(args.id, { type: 'STATUS_CHANGED', collab: mixingCollab })
       
       try {
-        // Create gold master record
         const goldMaster = await context.prisma.goldMaster.create({
           data: {
             collabId: args.id,
-            audioFileUrl: '', // Will update after mixdown
+            audioFileUrl: '',
           },
         })
         
-        // Perform mixdown
         const result = await mixdownTracks(
           goldMaster.id,
           acceptedTracks,
           collab.tempo || 120
         )
         
-        // Update gold master with mixdown results
         const updatedGoldMaster = await context.prisma.goldMaster.update({
           where: { id: goldMaster.id },
           data: {
@@ -75,15 +72,17 @@ builder.mutationField('finalizeCollab', (t) =>
           },
         })
         
-        // Set status to COMPLETED
-        await context.prisma.collab.update({
+        const completedCollab = await context.prisma.collab.update({
           where: { id: args.id },
           data: { status: 'COMPLETED' },
         })
+        publishCollabEvent(args.id, { type: 'STATUS_CHANGED', collab: completedCollab })
+        
+        // Publish new gold master to feed
+        publishNewGoldMaster(updatedGoldMaster)
         
         return updatedGoldMaster
       } catch (error) {
-        // Revert status on failure
         await context.prisma.collab.update({
           where: { id: args.id },
           data: { status: 'IN_PROGRESS' },
@@ -109,7 +108,6 @@ builder.mutationField('toggleLike', (t) =>
       })
       if (!goldMaster) throw new Error('Gold Master not found')
       
-      // Check if already liked
       const existingLike = await context.prisma.like.findUnique({
         where: {
           agentId_goldMasterId: {
@@ -120,12 +118,10 @@ builder.mutationField('toggleLike', (t) =>
       })
       
       if (existingLike) {
-        // Unlike
         await context.prisma.like.delete({
           where: { id: existingLike.id },
         })
       } else {
-        // Like
         await context.prisma.like.create({
           data: {
             agentId: agent.id,

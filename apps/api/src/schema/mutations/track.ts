@@ -3,6 +3,7 @@ import { TrackType, TrackStatus } from '../types/track.js'
 import { requireAuth } from '../../auth/context.js'
 import { saveTrackFile, validateAudioFile, deleteTrackFile } from '../../audio/storage.js'
 import { generateWaveformPeaks, probeAudioFile } from '../../audio/waveform.js'
+import { publishCollabEvent } from '../../pubsub.js'
 import { TrackStatus as PrismaTrackStatus } from '@radio/db'
 
 // Submit a track to a section
@@ -13,14 +14,12 @@ builder.mutationField('submitTrack', (t) =>
       sectionId: t.arg.string({ required: true }),
       instrument: t.arg.string({ required: true }),
       description: t.arg.string({ required: false }),
-      // For now, accept base64 encoded audio - file upload will be added later
       audioBase64: t.arg.string({ required: true }),
       audioFilename: t.arg.string({ required: true }),
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
       
-      // Verify section exists
       const section = await context.prisma.section.findUnique({
         where: { id: args.sectionId },
         include: { collab: true },
@@ -30,36 +29,28 @@ builder.mutationField('submitTrack', (t) =>
         throw new Error('Collab is not accepting submissions')
       }
       
-      // Decode and validate audio
       const audioBuffer = Buffer.from(args.audioBase64, 'base64')
       const validation = validateAudioFile(args.audioFilename, audioBuffer.length)
       if (!validation.valid) {
         throw new Error(validation.error)
       }
       
-      // Create track record first to get ID
       const track = await context.prisma.track.create({
         data: {
           sectionId: args.sectionId,
           submitterId: agent.id,
           instrument: args.instrument,
           description: args.description,
-          audioFileUrl: '', // Will update after save
+          audioFileUrl: '',
           status: 'PENDING',
         },
       })
       
       try {
-        // Save audio file
         const audioFileUrl = await saveTrackFile(track.id, audioBuffer, args.audioFilename)
-        
-        // Generate waveform
         const waveformData = await generateWaveformPeaks(audioBuffer)
-        
-        // Probe for metadata
         const metadata = await probeAudioFile(audioFileUrl) || { durationMs: null, sampleRate: null }
         
-        // Update track with file info
         const updatedTrack = await context.prisma.track.update({
           where: { id: track.id },
           data: {
@@ -70,17 +61,19 @@ builder.mutationField('submitTrack', (t) =>
           },
         })
         
-        // Update collab status to IN_PROGRESS if it was OPEN
         if (section.collab.status === 'OPEN') {
-          await context.prisma.collab.update({
+          const updatedCollab = await context.prisma.collab.update({
             where: { id: section.collab.id },
             data: { status: 'IN_PROGRESS' },
           })
+          publishCollabEvent(section.collab.id, { type: 'STATUS_CHANGED', collab: updatedCollab })
         }
+        
+        // Publish track submitted event
+        publishCollabEvent(section.collab.id, { type: 'TRACK_SUBMITTED', track: updatedTrack })
         
         return updatedTrack
       } catch (error) {
-        // Clean up on failure
         await context.prisma.track.delete({ where: { id: track.id } })
         throw error
       }
@@ -100,7 +93,6 @@ builder.mutationField('reviewTrack', (t) =>
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
       
-      // Get track with section and collab
       const track = await context.prisma.track.findUnique({
         where: { id: args.id },
         include: {
@@ -111,12 +103,10 @@ builder.mutationField('reviewTrack', (t) =>
       })
       if (!track) throw new Error('Track not found')
       
-      // Only collab creator can review
       if (track.section.collab.creatorId !== agent.id) {
         throw new Error('Only the collab creator can review tracks')
       }
       
-      // Validate status transition
       if (args.status === 'PENDING') {
         throw new Error('Cannot set status back to PENDING')
       }
@@ -128,6 +118,9 @@ builder.mutationField('reviewTrack', (t) =>
           creatorNotes: args.notes,
         },
       })
+      
+      // Publish track reviewed event
+      publishCollabEvent(track.section.collab.id, { type: 'TRACK_REVIEWED', track: updated })
       
       return updated
     },
@@ -151,10 +144,7 @@ builder.mutationField('deleteTrack', (t) =>
       if (track.submitterId !== agent.id) throw new Error('Only the submitter can delete their track')
       if (track.status !== 'PENDING') throw new Error('Can only delete pending tracks')
       
-      // Delete file
       await deleteTrackFile(track.audioFileUrl)
-      
-      // Delete record
       await context.prisma.track.delete({
         where: { id: args.id },
       })

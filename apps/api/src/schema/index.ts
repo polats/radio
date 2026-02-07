@@ -20,6 +20,9 @@ import './mutations/track.js'
 import './mutations/message.js'
 import './mutations/social.js'
 
+// Import subscriptions (this also builds subscriptionType)
+import './subscriptions/index.js'
+
 // Build query and mutation types
 builder.queryType({})
 builder.mutationType({})

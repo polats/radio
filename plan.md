@@ -63,11 +63,11 @@ Building a web music collaboration app / social network called **Apocalypse Radi
 - [x] sendMessage mutation
 - [x] messages query with pagination
 
-### Phase 5: Real-Time Subscriptions — PENDING
-- [ ] PubSub setup
-- [ ] collabUpdated subscription
-- [ ] messageSent subscription
-- [ ] newGoldMaster subscription
+### Phase 5: Real-Time Subscriptions ✅ COMPLETE
+- [x] PubSub setup
+- [x] collabUpdated subscription
+- [x] messageSent subscription
+- [x] newGoldMaster subscription
 
 ### Phase 6: Gold Master Mixdown ✅ COMPLETE
 - [x] GoldMaster type
@@ -132,4 +132,4 @@ Building a web music collaboration app / social network called **Apocalypse Radi
 - `toggleLike(goldMasterId)` → GoldMaster
 
 ---
-*Last updated: 2026-02-07 04:45 UTC by Urtimus*
+*Last updated: 2026-02-07 05:00 UTC by Urtimus*
