@@ -3,16 +3,7 @@
 import { Button } from './ui/button'
 import { useAuth } from '@/lib/context/auth-context'
 import { useState } from 'react'
-import { gql, useMutation, useQuery } from '@urql/next'
-
-const GET_NONCE_QUERY = gql`
-  query GetNonce($walletAddress: String!) {
-    getNonce(walletAddress: $walletAddress) {
-      nonce
-      message
-    }
-  }
-`
+import { gql, useMutation } from '@urql/next'
 
 const REGISTER_MUTATION = gql`
   mutation Register($walletAddress: String!, $signature: String!, $message: String!, $displayName: String) {
@@ -40,19 +31,57 @@ const AUTHENTICATE_MUTATION = gql`
   }
 `
 
+const GUEST_LOGIN_MUTATION = gql`
+  mutation LoginAsGuest($displayName: String) {
+    loginAsGuest(displayName: $displayName) {
+      token
+      agent {
+        id
+        walletAddress
+        displayName
+      }
+    }
+  }
+`
+
 export function ConnectButton() {
   const { agent, login, logout, isLoading } = useAuth()
   const [isConnecting, setIsConnecting] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [, registerMutation] = useMutation(REGISTER_MUTATION)
   const [, authenticateMutation] = useMutation(AUTHENTICATE_MUTATION)
+  const [, guestLoginMutation] = useMutation(GUEST_LOGIN_MUTATION)
 
-  const handleConnect = async () => {
+  const handleGuestLogin = async () => {
+    setIsConnecting(true)
+    setShowMenu(false)
+    try {
+      const result = await guestLoginMutation({
+        displayName: null
+      })
+      
+      if (result.data?.loginAsGuest) {
+        const { token, agent } = result.data.loginAsGuest
+        login(token, agent)
+      } else if (result.error) {
+        throw new Error(result.error.message)
+      }
+    } catch (err: any) {
+      console.error('Guest login failed:', err)
+      alert(err.message || 'Failed to login as guest')
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleWalletConnect = async () => {
     if (!window.ethereum) {
-      alert('Please install MetaMask to connect')
+      alert('Please install MetaMask to connect with a wallet')
       return
     }
 
     setIsConnecting(true)
+    setShowMenu(false)
     try {
       // Request account access
       const accounts = await window.ethereum.request({ 
@@ -118,22 +147,45 @@ export function ConnectButton() {
   }
 
   if (agent) {
+    const isGuest = agent.walletAddress.startsWith('0xguest')
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm text-zinc-400">
-          {agent.displayName || agent.walletAddress.slice(0, 6) + '...' + agent.walletAddress.slice(-4)}
+          {isGuest && <span className="text-yellow-500 mr-1">👤</span>}
+          {agent.displayName || agent.walletAddress.slice(0, 8) + '...' + agent.walletAddress.slice(-4)}
         </span>
         <Button variant="outline" size="sm" onClick={logout}>
-          Disconnect
+          {isGuest ? 'Exit' : 'Disconnect'}
         </Button>
       </div>
     )
   }
 
   return (
-    <Button onClick={handleConnect} disabled={isConnecting}>
-      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-    </Button>
+    <div className="relative">
+      <Button onClick={() => setShowMenu(!showMenu)} disabled={isConnecting}>
+        {isConnecting ? 'Connecting...' : 'Connect'}
+      </Button>
+      
+      {showMenu && (
+        <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
+          <button
+            onClick={handleGuestLogin}
+            className="w-full px-4 py-3 text-left hover:bg-zinc-800 rounded-t-lg transition-colors"
+          >
+            <div className="font-medium">Continue as Guest</div>
+            <div className="text-xs text-zinc-500">No wallet needed</div>
+          </button>
+          <button
+            onClick={handleWalletConnect}
+            className="w-full px-4 py-3 text-left hover:bg-zinc-800 rounded-b-lg border-t border-zinc-800 transition-colors"
+          >
+            <div className="font-medium">Connect Wallet</div>
+            <div className="text-xs text-zinc-500">MetaMask, etc.</div>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 

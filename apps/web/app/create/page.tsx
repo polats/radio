@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { gql, useMutation } from '@urql/next'
+import { useAuth } from '@/lib/context/auth-context'
 
 const CREATE_COLLAB_MUTATION = gql`
   mutation CreateCollab(
@@ -27,8 +28,22 @@ const CREATE_COLLAB_MUTATION = gql`
   }
 `
 
+const GUEST_LOGIN_MUTATION = gql`
+  mutation LoginAsGuest($displayName: String) {
+    loginAsGuest(displayName: $displayName) {
+      token
+      agent {
+        id
+        walletAddress
+        displayName
+      }
+    }
+  }
+`
+
 export default function CreatePage() {
   const router = useRouter()
+  const { agent, login, isLoading: authLoading } = useAuth()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [genre, setGenre] = useState('')
@@ -36,43 +51,70 @@ export default function CreatePage() {
   const [error, setError] = useState<string | null>(null)
   
   const [{ fetching }, createCollab] = useMutation(CREATE_COLLAB_MUTATION)
+  const [{ fetching: guestFetching }, guestLoginMutation] = useMutation(GUEST_LOGIN_MUTATION)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleGuestAndCreate = async () => {
     setError(null)
-    
     try {
-      const result = await createCollab({
-        title,
-        description: description || null,
-        genre: genre || null,
-        tempo: tempo || null,
-        sections: [
-          { name: 'Intro', orderIndex: 0, durationBeats: 16 },
-          { name: 'Verse', orderIndex: 1, durationBeats: 32 },
-          { name: 'Chorus', orderIndex: 2, durationBeats: 16 },
-          { name: 'Outro', orderIndex: 3, durationBeats: 16 },
-        ]
-      })
-      
-      if (result.error) {
-        // Check if it's an auth error
-        if (result.error.message.includes('Unauthorized') || 
-            result.error.message.includes('authenticated')) {
-          setError('Please connect your wallet first')
-        } else {
-          setError(result.error.message)
-        }
+      // First login as guest
+      const guestResult = await guestLoginMutation({ displayName: null })
+      if (guestResult.error) {
+        setError(guestResult.error.message)
         return
       }
-      
-      if (result.data?.createCollab?.id) {
-        router.push(`/collab/${result.data.createCollab.id}`)
+      if (guestResult.data?.loginAsGuest) {
+        const { token, agent: guestAgent } = guestResult.data.loginAsGuest
+        login(token, guestAgent)
+        // Now create the collab
+        await doCreateCollab()
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create collab')
     }
   }
+
+  const doCreateCollab = async () => {
+    const result = await createCollab({
+      title,
+      description: description || null,
+      genre: genre || null,
+      tempo: tempo || null,
+      sections: [
+        { name: 'Intro', orderIndex: 0, durationBeats: 16 },
+        { name: 'Verse', orderIndex: 1, durationBeats: 32 },
+        { name: 'Chorus', orderIndex: 2, durationBeats: 16 },
+        { name: 'Outro', orderIndex: 3, durationBeats: 16 },
+      ]
+    })
+    
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+    
+    if (result.data?.createCollab?.id) {
+      router.push(`/collab/${result.data.createCollab.id}`)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    
+    if (!agent) {
+      // Not logged in - do guest login first
+      await handleGuestAndCreate()
+      return
+    }
+    
+    try {
+      await doCreateCollab()
+    } catch (err: any) {
+      setError(err.message || 'Failed to create collab')
+    }
+  }
+
+  const isSubmitting = fetching || guestFetching
 
   return (
     <div className="max-w-xl mx-auto">
@@ -81,6 +123,11 @@ export default function CreatePage() {
       <Card>
         <CardHeader>
           <h3 className="font-semibold">Project Details</h3>
+          {!agent && !authLoading && (
+            <p className="text-sm text-zinc-500 mt-1">
+              You'll be logged in as a guest automatically when you create
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {error && (
@@ -147,9 +194,9 @@ export default function CreatePage() {
             <Button 
               type="submit" 
               className="w-full mt-6"
-              disabled={!title || fetching}
+              disabled={!title || isSubmitting}
             >
-              {fetching ? 'Creating...' : 'Create Collab'}
+              {isSubmitting ? 'Creating...' : agent ? 'Create Collab' : 'Create as Guest'}
             </Button>
           </form>
         </CardContent>
