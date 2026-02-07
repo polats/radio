@@ -113,14 +113,18 @@ export const NotationView = forwardRef<NotationViewHandle, NotationViewProps>(fu
       // Strip title from ABC notation to avoid rendering it
       const notationWithoutTitle = notation.replace(/^T:.*$/gm, '')
       
+      // Calculate width - ensure minimum of 300px
+      const containerWidth = containerRef.current.clientWidth
+      const calculatedWidth = width || Math.max(300, containerWidth - 20)
+      
       // Render ABC notation to SVG
       const tuneObjects = ABCJS.renderAbc(containerRef.current, notationWithoutTitle, {
         responsive: responsive ? 'resize' : undefined,
-        staffwidth: width || containerRef.current.clientWidth - 20,
+        staffwidth: calculatedWidth,
         paddingleft: 5,
         paddingright: 5,
-        paddingtop: 0,
-        paddingbottom: 0,
+        paddingtop: 5,
+        paddingbottom: 5,
         scale: 0.7,
         add_classes: true,
         // Drum-friendly colors
