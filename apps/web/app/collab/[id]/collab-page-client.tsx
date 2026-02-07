@@ -55,10 +55,6 @@ export function CollabPageClient({ collab, tracks, sections, messages }: CollabP
     await reviewTrack({ id: trackId, status: 'REJECTED' })
   }
 
-  const handleAddTrack = () => {
-    alert('Track upload coming soon!')
-  }
-
   return (
     <div className="h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
       <CollabView
@@ -70,7 +66,6 @@ export function CollabPageClient({ collab, tracks, sections, messages }: CollabP
         onSendMessage={handleSendMessage}
         onAcceptTrack={handleAcceptTrack}
         onRejectTrack={handleRejectTrack}
-        onAddTrack={handleAddTrack}
       />
     </div>
   )

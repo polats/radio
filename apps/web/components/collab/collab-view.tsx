@@ -69,7 +69,6 @@ interface CollabViewProps {
   onSendMessage?: (content: string) => void
   onAcceptTrack?: (trackId: string) => void
   onRejectTrack?: (trackId: string) => void
-  onAddTrack?: () => void
 }
 
 const statusColors: Record<string, string> = {
@@ -89,7 +88,6 @@ export function CollabView({
   onSendMessage,
   onAcceptTrack,
   onRejectTrack,
-  onAddTrack,
 }: CollabViewProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [mobilePanel, setMobilePanel] = useState<'timeline' | 'chat'>('timeline')
@@ -172,7 +170,6 @@ export function CollabView({
               durationMs={durationMs}
               selectedTrackId={selectedTrackId}
               onSelectTrack={setSelectedTrackId}
-              onAddTrack={onAddTrack}
             />
           </div>
 
@@ -209,7 +206,6 @@ export function CollabView({
                   durationMs={durationMs}
                   selectedTrackId={selectedTrackId}
                   onSelectTrack={setSelectedTrackId}
-                  onAddTrack={onAddTrack}
                 />
               </div>
               {/* Track Details - takes remaining space */}

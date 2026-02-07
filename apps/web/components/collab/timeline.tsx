@@ -6,8 +6,6 @@ import { SectionMarkers } from './section-markers'
 import { TrackLane } from './track-lane'
 import { TransportControls } from './transport-controls'
 import { useAudioPlayer } from './audio-player-context'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface Track {
   id: string
@@ -37,7 +35,6 @@ interface TimelineProps {
   durationMs: number
   selectedTrackId: string | null
   onSelectTrack: (trackId: string) => void
-  onAddTrack?: () => void
 }
 
 // Responsive pixels per second
@@ -50,7 +47,6 @@ export function Timeline({
   durationMs, 
   selectedTrackId, 
   onSelectTrack,
-  onAddTrack,
 }: TimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const { setTracks, setTotalDuration, currentTimeMs, isPlaying } = useAudioPlayer()
@@ -159,30 +155,6 @@ export function Timeline({
                 statusWidth={statusWidth}
               />
             ))}
-            
-            {/* Add track row */}
-            <div 
-              className="flex items-center border-b border-zinc-800"
-              style={{ height: trackHeight }}
-            >
-              <div 
-                className="flex-shrink-0 px-2 sm:px-3 border-r border-zinc-800"
-                style={{ width: labelWidth }}
-              >
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full text-zinc-500 hover:text-zinc-300 text-xs sm:text-sm"
-                  onClick={onAddTrack}
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> 
-                  <span className="hidden sm:inline">Add Track</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-              </div>
-              <div className="flex-1" />
-              <div style={{ width: statusWidth }} />
-            </div>
           </div>
         </div>
       </div>
