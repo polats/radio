@@ -1,55 +1,69 @@
 import { builder } from '../builder.js'
-import { pubsub, CollabEvent, MessageEvent, GoldMasterEvent } from '../../pubsub.js'
+import { 
+  CollabEvent, 
+  MessageEvent, 
+  GoldMasterEvent,
+  subscribeToCollab,
+  subscribeToMessages,
+  subscribeToNewGoldMasters
+} from '../../pubsub.js'
 import { TrackType } from '../types/track.js'
 import { CollabType } from '../types/collab.js'
 import { MessageType } from '../types/message.js'
 import { GoldMasterType } from '../types/goldmaster.js'
 
+// Event types for the union
+interface TrackSubmittedEvent { type: 'TRACK_SUBMITTED'; track: any }
+interface TrackReviewedEvent { type: 'TRACK_REVIEWED'; track: any }
+interface StatusChangedEvent { type: 'STATUS_CHANGED'; collab: any }
+interface SectionAddedEvent { type: 'SECTION_ADDED'; collab: any }
+
+// Object refs for event types
+const TrackSubmittedRef = builder.objectRef<TrackSubmittedEvent>('TrackSubmittedEvent')
+const TrackReviewedRef = builder.objectRef<TrackReviewedEvent>('TrackReviewedEvent')
+const StatusChangedRef = builder.objectRef<StatusChangedEvent>('StatusChangedEvent')
+const SectionAddedRef = builder.objectRef<SectionAddedEvent>('SectionAddedEvent')
+
+// Define the object types
+builder.objectType(TrackSubmittedRef, {
+  fields: (t) => ({
+    type: t.exposeString('type'),
+    track: t.field({ type: TrackType, resolve: (e) => e.track }),
+  }),
+})
+
+builder.objectType(TrackReviewedRef, {
+  fields: (t) => ({
+    type: t.exposeString('type'),
+    track: t.field({ type: TrackType, resolve: (e) => e.track }),
+  }),
+})
+
+builder.objectType(StatusChangedRef, {
+  fields: (t) => ({
+    type: t.exposeString('type'),
+    collab: t.field({ type: CollabType, resolve: (e) => e.collab }),
+  }),
+})
+
+builder.objectType(SectionAddedRef, {
+  fields: (t) => ({
+    type: t.exposeString('type'),
+    collab: t.field({ type: CollabType, resolve: (e) => e.collab }),
+  }),
+})
+
 // CollabEvent union type
 const CollabEventType = builder.unionType('CollabEvent', {
-  types: [
-    builder.objectRef<{ type: 'TRACK_SUBMITTED'; track: any }>('TrackSubmittedEvent'),
-    builder.objectRef<{ type: 'TRACK_REVIEWED'; track: any }>('TrackReviewedEvent'),
-    builder.objectRef<{ type: 'STATUS_CHANGED'; collab: any }>('StatusChangedEvent'),
-    builder.objectRef<{ type: 'SECTION_ADDED'; collab: any }>('SectionAddedEvent'),
-  ],
-  resolveType: (event) => {
+  types: [TrackSubmittedRef, TrackReviewedRef, StatusChangedRef, SectionAddedRef],
+  resolveType: (event: CollabEvent) => {
     switch (event.type) {
-      case 'TRACK_SUBMITTED': return 'TrackSubmittedEvent'
-      case 'TRACK_REVIEWED': return 'TrackReviewedEvent'
-      case 'STATUS_CHANGED': return 'StatusChangedEvent'
-      case 'SECTION_ADDED': return 'SectionAddedEvent'
+      case 'TRACK_SUBMITTED': return TrackSubmittedRef
+      case 'TRACK_REVIEWED': return TrackReviewedRef
+      case 'STATUS_CHANGED': return StatusChangedRef
+      case 'SECTION_ADDED': return SectionAddedRef
     }
   },
-})
-
-// Event object types
-builder.objectType(builder.objectRef<{ type: 'TRACK_SUBMITTED'; track: any }>('TrackSubmittedEvent'), {
-  fields: (t) => ({
-    type: t.exposeString('type'),
-    track: t.field({ type: TrackType, resolve: (e) => e.track }),
-  }),
-})
-
-builder.objectType(builder.objectRef<{ type: 'TRACK_REVIEWED'; track: any }>('TrackReviewedEvent'), {
-  fields: (t) => ({
-    type: t.exposeString('type'),
-    track: t.field({ type: TrackType, resolve: (e) => e.track }),
-  }),
-})
-
-builder.objectType(builder.objectRef<{ type: 'STATUS_CHANGED'; collab: any }>('StatusChangedEvent'), {
-  fields: (t) => ({
-    type: t.exposeString('type'),
-    collab: t.field({ type: CollabType, resolve: (e) => e.collab }),
-  }),
-})
-
-builder.objectType(builder.objectRef<{ type: 'SECTION_ADDED'; collab: any }>('SectionAddedEvent'), {
-  fields: (t) => ({
-    type: t.exposeString('type'),
-    collab: t.field({ type: CollabType, resolve: (e) => e.collab }),
-  }),
 })
 
 // Define subscription type
@@ -61,9 +75,7 @@ builder.subscriptionType({
       args: {
         collabId: t.arg.string({ required: true }),
       },
-      subscribe: (_parent, { collabId }) => {
-        return pubsub.subscribe(`collab:${collabId}`)
-      },
+      subscribe: (_parent, { collabId }) => subscribeToCollab(collabId),
       resolve: (event: CollabEvent) => event,
     }),
 
@@ -73,18 +85,14 @@ builder.subscriptionType({
       args: {
         collabId: t.arg.string({ required: true }),
       },
-      subscribe: (_parent, { collabId }) => {
-        return pubsub.subscribe(`messages:${collabId}`)
-      },
+      subscribe: (_parent, { collabId }) => subscribeToMessages(collabId),
       resolve: (event: MessageEvent) => event.message,
     }),
 
     // Subscribe to new gold masters
     newGoldMaster: t.field({
       type: GoldMasterType,
-      subscribe: () => {
-        return pubsub.subscribe('newGoldMaster')
-      },
+      subscribe: () => subscribeToNewGoldMasters(),
       resolve: (event: GoldMasterEvent) => event.goldMaster,
     }),
   }),

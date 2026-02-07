@@ -1,5 +1,5 @@
 import { createPubSub } from 'graphql-yoga'
-import { Collab, Track, Message, GoldMaster } from '@radio/db'
+import type { Collab, Track, Message, GoldMaster } from '@radio/db'
 
 // Event types
 export type CollabEvent = 
@@ -16,15 +16,8 @@ export type GoldMasterEvent = {
   goldMaster: GoldMaster
 }
 
-// Create typed pub/sub
-export const pubsub = createPubSub<{
-  // Collab-specific events
-  [`collab:${string}`]: [CollabEvent]
-  // Message events for a collab
-  [`messages:${string}`]: [MessageEvent]
-  // New gold masters (global feed)
-  'newGoldMaster': [GoldMasterEvent]
-}>()
+// Simple pubsub - using any to avoid complex typing issues with graphql-yoga
+export const pubsub = createPubSub<Record<string, [any]>>()
 
 // Helper functions
 export function publishCollabEvent(collabId: string, event: CollabEvent) {
@@ -37,4 +30,17 @@ export function publishMessage(collabId: string, message: Message) {
 
 export function publishNewGoldMaster(goldMaster: GoldMaster) {
   pubsub.publish('newGoldMaster', { goldMaster })
+}
+
+// Subscribe functions
+export function subscribeToCollab(collabId: string) {
+  return pubsub.subscribe(`collab:${collabId}`)
+}
+
+export function subscribeToMessages(collabId: string) {
+  return pubsub.subscribe(`messages:${collabId}`)
+}
+
+export function subscribeToNewGoldMasters() {
+  return pubsub.subscribe('newGoldMaster')
 }
