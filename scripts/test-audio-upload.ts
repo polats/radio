@@ -14,10 +14,17 @@ interface GraphQLResponse<T> {
   errors?: { message: string }[]
 }
 
+let authToken: string | null = null
+
 async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`
+  }
+  
   const res = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ query, variables }),
   })
   const json: GraphQLResponse<T> = await res.json()
@@ -32,50 +39,47 @@ async function main() {
 
   // Step 1: Create a guest agent
   console.log('1️⃣ Creating guest agent...')
-  const { createGuestAgent } = await graphql<{ createGuestAgent: { id: string; token: string } }>(`
+  const { loginAsGuest } = await graphql<{ loginAsGuest: { agent: { id: string }; token: string } }>(`
     mutation {
-      createGuestAgent {
-        id
+      loginAsGuest {
+        agent { id }
         token
       }
     }
   `)
-  console.log(`   ✅ Agent: ${createGuestAgent.id}`)
-  const token = createGuestAgent.token
+  console.log(`   ✅ Agent: ${loginAsGuest.agent.id}`)
+  authToken = loginAsGuest.token
 
   // Step 2: Create a collab
   console.log('2️⃣ Creating collab...')
   const { createCollab } = await graphql<{ createCollab: { id: string; title: string } }>(`
-    mutation CreateCollab($input: CreateCollabInput!) {
-      createCollab(input: $input) {
+    mutation CreateCollab($title: String!, $genre: String, $tempo: Int) {
+      createCollab(title: $title, genre: $genre, tempo: $tempo) {
         id
         title
       }
     }
   `, {
-    input: {
-      title: 'Audio Test Session',
-      genre: 'Electronic',
-      tempo: 120,
-    },
+    title: 'Audio Test Session',
+    genre: 'Electronic',
+    tempo: 120,
   })
   console.log(`   ✅ Collab: ${createCollab.title} (${createCollab.id})`)
 
   // Step 3: Add a section
   console.log('3️⃣ Adding section...')
   const { addSection } = await graphql<{ addSection: { id: string; name: string } }>(`
-    mutation AddSection($collabId: String!, $input: AddSectionInput!) {
-      addSection(collabId: $collabId, input: $input) {
+    mutation AddSection($collabId: String!, $name: String!, $durationBeats: Int!, $orderIndex: Int!) {
+      addSection(collabId: $collabId, name: $name, durationBeats: $durationBeats, orderIndex: $orderIndex) {
         id
         name
       }
     }
   `, {
     collabId: createCollab.id,
-    input: {
-      name: 'Intro',
-      durationBeats: 16,
-    },
+    name: 'Intro',
+    durationBeats: 16,
+    orderIndex: 0,
   })
   console.log(`   ✅ Section: ${addSection.name} (${addSection.id})`)
 
@@ -88,7 +92,6 @@ async function main() {
   ]
 
   console.log('4️⃣ Uploading tracks...')
-  const uploadedTracks: { id: string; instrument: string; signedAudioUrl: string | null }[] = []
 
   for (const file of testFiles) {
     const filepath = resolve(process.cwd(), file.path)
@@ -97,7 +100,16 @@ async function main() {
       const base64 = buffer.toString('base64')
       const filename = filepath.split('/').pop()!
 
-      const { submitTrack } = await graphql<{ submitTrack: { id: string; instrument: string; audioFileUrl: string; signedAudioUrl: string | null; durationMs: number | null; waveformData: number[] | null } }>(`
+      const { submitTrack } = await graphql<{ 
+        submitTrack: { 
+          id: string
+          instrument: string
+          audioFileUrl: string
+          signedAudioUrl: string | null
+          durationMs: number | null
+          waveformData: number[] | null 
+        } 
+      }>(`
         mutation SubmitTrack($sectionId: String!, $instrument: String!, $audioBase64: String!, $audioFilename: String!, $description: String) {
           submitTrack(sectionId: $sectionId, instrument: $instrument, audioBase64: $audioBase64, audioFilename: $audioFilename, description: $description) {
             id
@@ -116,10 +128,11 @@ async function main() {
         description: `Test ${file.instrument} track`,
       })
 
-      uploadedTracks.push(submitTrack)
       console.log(`   ✅ ${file.instrument}: ${submitTrack.id}`)
-      console.log(`      📁 Storage: ${submitTrack.audioFileUrl}`)
-      console.log(`      🔗 Signed URL: ${submitTrack.signedAudioUrl?.substring(0, 80)}...`)
+      console.log(`      📁 Storage: ${submitTrack.audioFileUrl.substring(0, 50)}...`)
+      if (submitTrack.signedAudioUrl) {
+        console.log(`      🔗 Signed URL: ${submitTrack.signedAudioUrl.substring(0, 60)}...`)
+      }
       console.log(`      ⏱️ Duration: ${submitTrack.durationMs}ms`)
       console.log(`      📊 Waveform: ${submitTrack.waveformData ? `${(submitTrack.waveformData as number[]).length} peaks` : 'none'}`)
     } catch (e: any) {
@@ -148,7 +161,7 @@ async function main() {
   console.log(`   ✅ Found ${totalTracks} tracks in collab`)
 
   console.log('\n🎉 Test complete!')
-  console.log(`   Collab URL: ${API_URL.replace('/graphql', '')}/collab/${createCollab.id}`)
+  console.log(`   Collab URL: ${API_URL.replace('/graphql', '').replace('api-', 'web-').replace('-9382', '-4c0410')}/collab/${createCollab.id}`)
 }
 
 main().catch(e => {

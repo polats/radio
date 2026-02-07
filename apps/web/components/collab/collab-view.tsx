@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Timeline } from './timeline'
 import { ChatPanel } from './chat-panel'
 import { TrackDetails } from './track-details'
+import { AudioPlayerProvider } from './audio-player-context'
 import { Button } from '@/components/ui/button'
 import { MessageSquare, Layers } from 'lucide-react'
 
@@ -100,6 +101,7 @@ export function CollabView({
   const durationMs = Math.max(maxTrackEnd, maxSectionEnd, 180000) // At least 3 minutes
 
   return (
+    <AudioPlayerProvider>
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">
@@ -226,5 +228,6 @@ export function CollabView({
         </div>
       </div>
     </div>
+    </AudioPlayerProvider>
   )
 }

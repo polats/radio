@@ -15,6 +15,7 @@ interface Track {
   startTimeMs: number
   durationMs: number
   waveformData?: number[]
+  signedAudioUrl?: string
   submitter: {
     displayName?: string
     walletAddress: string
@@ -50,8 +51,6 @@ export function Timeline({
   onSelectTrack,
   onAddTrack,
 }: TimelineProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   
   // Use smaller scale on mobile
@@ -63,20 +62,12 @@ export function Timeline({
   }
   
   const pixelsPerSecond = isMobile ? PIXELS_PER_SECOND_MOBILE : PIXELS_PER_SECOND_DESKTOP
-  const labelWidth = isMobile ? 80 : 128
+  const labelWidth = isMobile ? 100 : 140  // Wider for play button
   const statusWidth = isMobile ? 32 : 40
 
   const timelineWidth = (durationMs / 1000) * pixelsPerSecond
   const trackHeight = isMobile ? 48 : 56
   const trackAreaHeight = Math.max(tracks.length * trackHeight + trackHeight, 150)
-
-  const handlePlay = () => setIsPlaying(true)
-  const handlePause = () => setIsPlaying(false)
-  const handleStop = () => {
-    setIsPlaying(false)
-    setCurrentTimeMs(0)
-  }
-  const handleSeek = (timeMs: number) => setCurrentTimeMs(timeMs)
 
   return (
     <div className="flex flex-col bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden h-full">
@@ -112,12 +103,6 @@ export function Timeline({
                 height={trackAreaHeight}
               />
             </div>
-            
-            {/* Playhead */}
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none"
-              style={{ left: labelWidth + (currentTimeMs / 1000) * pixelsPerSecond }}
-            />
             
             {/* Track lanes */}
             {tracks.map((track) => (
@@ -161,16 +146,7 @@ export function Timeline({
       </div>
       
       {/* Transport controls */}
-      <TransportControls
-        isPlaying={isPlaying}
-        currentTimeMs={currentTimeMs}
-        durationMs={durationMs}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onStop={handleStop}
-        onSeek={handleSeek}
-        compact={isMobile}
-      />
+      <TransportControls compact={isMobile} />
     </div>
   )
 }

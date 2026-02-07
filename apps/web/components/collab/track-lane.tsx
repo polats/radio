@@ -1,6 +1,8 @@
 'use client'
 
+import { Play, Pause } from 'lucide-react'
 import { Waveform } from './waveform'
+import { useAudioPlayer } from './audio-player-context'
 
 interface Track {
   id: string
@@ -9,6 +11,7 @@ interface Track {
   startTimeMs: number
   durationMs: number
   waveformData?: number[]
+  signedAudioUrl?: string
   submitter: {
     displayName?: string
     walletAddress: string
@@ -55,16 +58,33 @@ export function TrackLane({
   labelWidth = 128,
   statusWidth = 40,
 }: TrackLaneProps) {
+  const { currentTrack, isPlaying, playTrack, pause } = useAudioPlayer()
+  
   const left = (track.startTimeMs / 1000) * pixelsPerSecond
   const width = (track.durationMs / 1000) * pixelsPerSecond
   const height = compact ? 48 : 56
   const waveformHeight = compact ? 36 : 44
+  
+  const isCurrentTrack = currentTrack?.id === track.id
+  const isThisPlaying = isCurrentTrack && isPlaying
+  const hasAudio = !!track.signedAudioUrl
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!hasAudio) return
+    
+    if (isThisPlaying) {
+      pause()
+    } else {
+      playTrack(track)
+    }
+  }
 
   return (
     <div 
       className={`flex items-center border-b border-zinc-800 cursor-pointer transition-colors ${
         isSelected ? 'bg-zinc-800/50' : 'hover:bg-zinc-900/50'
-      }`}
+      } ${isCurrentTrack ? 'ring-1 ring-inset ring-green-500/50' : ''}`}
       style={{ height }}
       onClick={onSelect}
     >
@@ -73,7 +93,25 @@ export function TrackLane({
         className="flex-shrink-0 px-2 sm:px-3 flex items-center gap-1 sm:gap-2 border-r border-zinc-800 overflow-hidden"
         style={{ width: labelWidth }}
       >
-        <span className={compact ? 'text-sm' : 'text-lg'}>🎵</span>
+        {/* Play button */}
+        <button
+          onClick={handlePlayClick}
+          disabled={!hasAudio}
+          className={`flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors ${
+            hasAudio 
+              ? isThisPlaying 
+                ? 'bg-green-500 text-white' 
+                : 'bg-zinc-700 hover:bg-zinc-600 text-white'
+              : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+          }`}
+        >
+          {isThisPlaying ? (
+            <Pause className="w-3 h-3" />
+          ) : (
+            <Play className="w-3 h-3 ml-0.5" />
+          )}
+        </button>
+        
         <div className="min-w-0 flex-1">
           <div className={`font-medium truncate ${compact ? 'text-xs' : 'text-sm'}`}>
             {track.instrument}
@@ -87,14 +125,14 @@ export function TrackLane({
       {/* Waveform area */}
       <div className="flex-1 relative h-full">
         <div
-          className="absolute top-1 bottom-1 rounded bg-zinc-800/50"
+          className={`absolute top-1 bottom-1 rounded ${isThisPlaying ? 'bg-green-900/30' : 'bg-zinc-800/50'}`}
           style={{ left, width: Math.max(width, 20) }}
         >
           <Waveform 
             data={track.waveformData} 
             width={Math.max(width - 8, 20)} 
             height={waveformHeight}
-            color={waveformColors[track.status]}
+            color={isThisPlaying ? '#22c55e' : waveformColors[track.status]}
             className="mx-1"
           />
         </div>
