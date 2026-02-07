@@ -65,6 +65,7 @@ export function TrackLane({
     playTrackSolo, 
     toggleMuteTrack,
     isPlaying: timelinePlaying,
+    pause,
   } = useAudioPlayer()
   
   const left = (track.startTimeMs / 1000) * pixelsPerSecond
@@ -80,7 +81,13 @@ export function TrackLane({
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!hasAudio) return
-    playTrackSolo(track)
+    
+    // If this track is currently playing and solo'd, stop it
+    if (isThisPlaying && timelinePlaying && isSoloed) {
+      pause()
+    } else {
+      playTrackSolo(track)
+    }
   }
 
   const handleMuteClick = (e: React.MouseEvent) => {
