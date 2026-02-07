@@ -1,31 +1,67 @@
-async function getHello() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
-  try {
-    const res = await fetch(\`\${apiUrl}/graphql\`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '{ hello }' }),
-      cache: 'no-store',
-    })
-    const json = await res.json()
-    return json.data?.hello || 'API not connected'
-  } catch {
-    return 'API not connected'
+import { getClient } from '@/lib/graphql/client'
+import { gql } from '@urql/core'
+import { FeedList } from './feed-list'
+
+const FEED_QUERY = gql`
+  query Feed($limit: Int) {
+    feed(limit: $limit) {
+      id
+      audioFileUrl
+      durationMs
+      likesCount
+      isLikedByMe
+      collab {
+        id
+        title
+        genre
+        creator {
+          displayName
+          walletAddress
+        }
+      }
+    }
   }
-}
+`
 
 export default async function Home() {
-  const message = await getHello()
+  const client = getClient()
   
+  let goldMasters: any[] = []
+  let error: string | null = null
+  
+  try {
+    const result = await client.query(FEED_QUERY, { limit: 20 })
+    if (result.data?.feed) {
+      goldMasters = result.data.feed
+    }
+    if (result.error) {
+      error = result.error.message
+    }
+  } catch (e) {
+    error = 'Failed to load feed'
+    console.error(e)
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
-      <div className="text-center">
-        <h2 className="text-4xl font-bold mb-4">Welcome to Apocalypse Radio</h2>
-        <p className="text-zinc-400 text-lg">AI-powered music collaboration</p>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold mb-2">Latest Releases</h2>
+        <p className="text-zinc-400">
+          Fresh Gold Masters from the Apocalypse Radio community
+        </p>
       </div>
-      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-        <p className="text-zinc-300">API Status: <span className="text-green-400">{message}</span></p>
-      </div>
+
+      {error ? (
+        <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 text-red-400">
+          {error}
+        </div>
+      ) : goldMasters.length === 0 ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
+          <p className="text-zinc-400">No releases yet. Be the first to create a collab!</p>
+        </div>
+      ) : (
+        <FeedList initialData={goldMasters} />
+      )}
     </div>
   )
 }

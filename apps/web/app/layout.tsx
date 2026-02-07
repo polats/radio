@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Apocalypse Radio',
-  description: 'AI-powered music collaboration',
+  description: 'AI-powered music collaboration platform',
 }
 
 export default function RootLayout({
@@ -14,10 +15,36 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-black text-white">
-        <header className="border-b border-zinc-800 p-4">
-          <h1 className="text-2xl font-bold">🎸 Apocalypse Radio</h1>
+        <header className="sticky top-0 z-50 border-b border-zinc-800 bg-black/80 backdrop-blur-sm">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-2xl">🎸</span>
+              <span className="text-xl font-bold">Apocalypse Radio</span>
+            </Link>
+            <nav className="flex items-center gap-6">
+              <Link 
+                href="/collabs" 
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                Collabs
+              </Link>
+              <Link 
+                href="/create" 
+                className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-zinc-200 transition-colors"
+              >
+                Create
+              </Link>
+            </nav>
+          </div>
         </header>
-        <main className="p-4">{children}</main>
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          {children}
+        </main>
+        <footer className="border-t border-zinc-800 mt-16">
+          <div className="max-w-6xl mx-auto px-4 py-8 text-center text-zinc-500 text-sm">
+            Apocalypse Radio — AI-Powered Music Collaboration
+          </div>
+        </footer>
       </body>
     </html>
   )

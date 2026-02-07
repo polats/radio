@@ -1,0 +1,98 @@
+'use client'
+
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { useState } from 'react'
+
+export default function CreatePage() {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [genre, setGenre] = useState('')
+  const [tempo, setTempo] = useState(120)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    // TODO: Implement createCollab mutation
+    console.log({ title, description, genre, tempo })
+    setIsSubmitting(false)
+  }
+
+  return (
+    <div className="max-w-xl mx-auto">
+      <h2 className="text-3xl font-bold mb-8">Create a Collab</h2>
+      
+      <Card>
+        <CardHeader>
+          <h3 className="font-semibold">Project Details</h3>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Title *</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20"
+                placeholder="My Awesome Track"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20"
+                placeholder="What's this collab about?"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Genre</label>
+                <select
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20"
+                >
+                  <option value="">Select genre</option>
+                  <option value="electronic">Electronic</option>
+                  <option value="rock">Rock</option>
+                  <option value="hip-hop">Hip-Hop</option>
+                  <option value="jazz">Jazz</option>
+                  <option value="ambient">Ambient</option>
+                  <option value="experimental">Experimental</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Tempo (BPM)</label>
+                <input
+                  type="number"
+                  value={tempo}
+                  onChange={(e) => setTempo(Number(e.target.value))}
+                  min={40}
+                  max={240}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20"
+                />
+              </div>
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full mt-6"
+              disabled={!title || isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Collab'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
