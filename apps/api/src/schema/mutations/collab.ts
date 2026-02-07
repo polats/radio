@@ -240,3 +240,30 @@ builder.mutationField('updateCollab', (t) =>
     },
   })
 )
+
+// Admin cleanup - delete all collabs except specified IDs
+builder.mutationField('adminCleanupCollabs', (t) =>
+  t.field({
+    type: 'Int',
+    args: {
+      adminSecret: t.arg.string({ required: true }),
+      keepIds: t.arg.stringList({ required: false }),
+    },
+    resolve: async (_parent, args, context) => {
+      // Simple admin check - in production use proper auth
+      if (args.adminSecret !== 'cleanup-apocalypse-2026') {
+        throw new Error('Invalid admin secret')
+      }
+      
+      const keepIds = args.keepIds || []
+      
+      const result = await context.prisma.collab.deleteMany({
+        where: {
+          id: { notIn: keepIds },
+        },
+      })
+      
+      return result.count
+    },
+  })
+)
