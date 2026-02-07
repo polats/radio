@@ -18,6 +18,9 @@ COPY packages/db/ ./packages/db/
 COPY packages/shared/ ./packages/shared/
 COPY apps/web/ ./apps/web/
 
+# Create public dir if not exists
+RUN mkdir -p /app/apps/web/public
+
 # Build Next.js app
 RUN cd apps/web && pnpm build
 
