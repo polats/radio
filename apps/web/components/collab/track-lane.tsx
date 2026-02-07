@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import { Waveform } from './waveform'
 import { useAudioPlayer } from './audio-player-context'
@@ -66,7 +67,11 @@ export function TrackLane({
     toggleMuteTrack,
     isPlaying: timelinePlaying,
     pause,
+    seek,
+    play,
   } = useAudioPlayer()
+  
+  const waveformRef = useRef<HTMLDivElement>(null)
   
   const left = (track.startTimeMs / 1000) * pixelsPerSecond
   const width = (track.durationMs / 1000) * pixelsPerSecond
@@ -93,6 +98,24 @@ export function TrackLane({
   const handleMuteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     toggleMuteTrack(track.id)
+  }
+
+  const handleWaveformClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!waveformRef.current) return
+    
+    const rect = waveformRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const clickRatio = clickX / rect.width
+    const seekTimeMs = clickRatio * (rect.width / pixelsPerSecond) * 1000
+    
+    // Seek to the clicked position in the timeline
+    seek(seekTimeMs)
+    
+    // If not playing, start playback
+    if (!timelinePlaying) {
+      play()
+    }
   }
 
   return (
@@ -160,10 +183,15 @@ export function TrackLane({
         </div>
       </div>
       
-      {/* Waveform area */}
-      <div className="flex-1 relative h-full">
+      {/* Waveform area - click to scrub */}
+      <div 
+        ref={waveformRef}
+        className="flex-1 relative h-full cursor-crosshair"
+        onClick={handleWaveformClick}
+        title="Click to seek"
+      >
         <div
-          className={`absolute top-1 bottom-1 rounded transition-colors ${
+          className={`absolute top-1 bottom-1 rounded transition-colors pointer-events-none ${
             isThisPlaying 
               ? 'bg-green-900/40' 
               : isMuted 

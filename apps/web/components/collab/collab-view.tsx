@@ -17,6 +17,7 @@ interface Track {
   durationMs: number
   waveformData?: number[]
   signedAudioUrl?: string
+  notationAbc?: string
   creatorNotes?: string
   submitter: {
     id: string
@@ -98,7 +99,9 @@ export function CollabView({
   // Calculate total duration from tracks and sections
   const maxTrackEnd = Math.max(...tracks.map(t => t.startTimeMs + t.durationMs), 0)
   const maxSectionEnd = Math.max(...sections.map(s => s.endTimeMs), 0)
-  const durationMs = Math.max(maxTrackEnd, maxSectionEnd, 180000) // At least 3 minutes
+  const contentDurationMs = Math.max(maxTrackEnd, maxSectionEnd)
+  // Add 2 second buffer after content, or 30 seconds minimum if no content
+  const durationMs = contentDurationMs > 0 ? contentDurationMs + 2000 : 30000
 
   return (
     <AudioPlayerProvider>
