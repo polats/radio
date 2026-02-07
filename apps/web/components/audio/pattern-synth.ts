@@ -135,13 +135,14 @@ export class PatternSynth {
     const synth = this.getSynth(sound)
     const config = DRUM_CONFIG[sound]
     
+    const now = Tone.now()
     if (config.type === 'membrane') {
       const pitch = DRUM_PITCHES[sound] || 'C2'
-      ;(synth as Tone.MembraneSynth).triggerAttackRelease(pitch, '8n', undefined, velocity)
+      ;(synth as Tone.MembraneSynth).triggerAttackRelease(pitch, '8n', now, velocity)
     } else if (config.type === 'noise') {
-      ;(synth as Tone.NoiseSynth).triggerAttackRelease('8n', undefined, velocity)
+      ;(synth as Tone.NoiseSynth).triggerAttackRelease('8n', now, velocity)
     } else {
-      ;(synth as Tone.MetalSynth).triggerAttackRelease('16n', undefined, velocity)
+      ;(synth as Tone.MetalSynth).triggerAttackRelease('16n', now, velocity)
     }
   }
   

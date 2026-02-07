@@ -8,6 +8,7 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
+    "@radio/shared": "workspace:^",
     "@urql/core": "^5.1.1",
     "@urql/next": "^1.1.4",
     "abcjs": "^6.6.1",

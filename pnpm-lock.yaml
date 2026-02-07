@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@radio/shared':
+        specifier: workspace:^
+        version: link:../../packages/shared
       '@urql/core':
         specifier: ^5.1.1
         version: 5.2.0(graphql@16.12.0)
