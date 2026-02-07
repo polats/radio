@@ -2,8 +2,10 @@
 
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Play, Pause, Check, X, RotateCcw } from 'lucide-react'
+import { Play, Pause, Check, X, RotateCcw, Music } from 'lucide-react'
 import { NotationView } from './notation-view'
+import { usePatternPlayer } from '../audio/use-pattern-player'
+import type { PatternData } from '@radio/shared'
 
 interface Track {
   id: string
@@ -12,6 +14,7 @@ interface Track {
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'REVISION'
   durationMs?: number
   signedAudioUrl?: string
+  patternData?: PatternData
   creatorNotes?: string
   notationAbc?: string
   waveformData?: number[]
@@ -40,16 +43,29 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 
 export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRevision }: TrackDetailsProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const patternPlayer = usePatternPlayer()
+  
+  const hasPattern = !!track?.patternData
+  const hasAudio = !!track?.signedAudioUrl
+  const canPlay = hasPattern || hasAudio
+  const isPlaying = hasPattern ? patternPlayer.isPlaying : isPlayingAudio
 
-  const handlePlayPause = () => {
-    if (!audioRef.current || !track?.signedAudioUrl) return
-    if (isPlaying) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play()
+  const handlePlayPause = async () => {
+    if (!track) return
+    
+    if (hasPattern && track.patternData) {
+      // Use pattern synth
+      await patternPlayer.toggle(track.patternData as PatternData, true)
+    } else if (hasAudio && audioRef.current) {
+      // Use audio element
+      if (isPlayingAudio) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlayingAudio(!isPlayingAudio)
     }
-    setIsPlaying(!isPlaying)
   }
 
   if (!track) {
@@ -62,16 +78,15 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
 
   const status = statusLabels[track.status]
   const durationSec = track.durationMs ? track.durationMs / 1000 : 0
-  const hasAudio = !!track.signedAudioUrl
 
   return (
     <div className="h-full flex flex-col bg-zinc-900/50 rounded-lg border border-zinc-800 overflow-hidden">
-      {/* Hidden audio element */}
-      {hasAudio && (
+      {/* Hidden audio element for non-pattern tracks */}
+      {hasAudio && !hasPattern && (
         <audio 
           ref={audioRef} 
           src={track.signedAudioUrl} 
-          onEnded={() => setIsPlaying(false)}
+          onEnded={() => setIsPlayingAudio(false)}
         />
       )}
       
@@ -101,14 +116,24 @@ export function TrackDetails({ track, isCreator, onAccept, onReject, onRequestRe
           size="sm" 
           className="w-full"
           onClick={handlePlayPause}
-          disabled={!hasAudio}
+          disabled={!canPlay}
         >
-          {isPlaying ? (
+          {patternPlayer.isLoading ? (
+            <><Music className="w-4 h-4 mr-2 animate-pulse" /> Loading...</>
+          ) : isPlaying ? (
             <><Pause className="w-4 h-4 mr-2" /> Playing...</>
           ) : (
-            <><Play className="w-4 h-4 mr-2" /> {hasAudio ? 'Play Track' : 'No Audio'}</>
+            <><Play className="w-4 h-4 mr-2" /> {canPlay ? (hasPattern ? 'Play Pattern' : 'Play Track') : 'No Audio'}</>
           )}
         </Button>
+        
+        {/* Pattern indicator */}
+        {hasPattern && (
+          <div className="flex items-center gap-2 text-xs text-green-400">
+            <Music className="w-3 h-3" />
+            <span>Synthesized from pattern data</span>
+          </div>
+        )}
 
         {/* Description */}
         {track.description && (

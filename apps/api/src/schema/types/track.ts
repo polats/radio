@@ -34,6 +34,7 @@ builder.objectType(TrackType, {
       },
     }),
     waveformData: t.expose('waveformData', { type: 'JSON', nullable: true }),
+    patternData: t.expose('patternData', { type: 'JSON', nullable: true }),
     notationAbc: t.exposeString('notationAbc', { nullable: true }),
     durationMs: t.exposeInt('durationMs', { nullable: true }),
     sampleRate: t.exposeInt('sampleRate', { nullable: true }),

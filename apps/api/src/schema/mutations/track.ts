@@ -5,6 +5,7 @@ import { saveTrackFile, validateAudioFile, deleteTrackFile } from '../../audio/s
 import { generateWaveformPeaks, probeBuffer } from '../../audio/waveform.js'
 import { publishCollabEvent } from '../../pubsub.js'
 import { TrackStatus as PrismaTrackStatus } from '@radio/db'
+import { validatePattern, patternToABC, patternDurationMs, type PatternData } from '@radio/shared'
 
 // Submit a track to a section
 builder.mutationField('submitTrack', (t) =>
@@ -82,6 +83,109 @@ builder.mutationField('submitTrack', (t) =>
     },
   })
 )
+
+// Submit a pattern-based track (no audio file needed)
+builder.mutationField('submitPattern', (t) =>
+  t.field({
+    type: TrackType,
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      instrument: t.arg.string({ required: true }),
+      description: t.arg.string({ required: false }),
+      patternJson: t.arg.string({ required: true }), // JSON string of PatternData
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      const section = await context.prisma.section.findUnique({
+        where: { id: args.sectionId },
+        include: { collab: true },
+      })
+      if (!section) throw new Error('Section not found')
+      if (section.collab.status !== 'OPEN' && section.collab.status !== 'IN_PROGRESS') {
+        throw new Error('Collab is not accepting submissions')
+      }
+      
+      // Parse and validate pattern
+      let patternData: PatternData
+      try {
+        patternData = JSON.parse(args.patternJson)
+      } catch {
+        throw new Error('Invalid JSON in patternJson')
+      }
+      
+      if (!validatePattern(patternData)) {
+        throw new Error('Invalid pattern data format')
+      }
+      
+      // Generate notation from pattern
+      const notationAbc = patternToABC(patternData)
+      
+      // Calculate duration from pattern
+      const durationMs = patternDurationMs(patternData.pattern)
+      
+      // Generate waveform preview from pattern
+      const waveformData = generatePatternWaveform(patternData)
+      
+      const track = await context.prisma.track.create({
+        data: {
+          sectionId: args.sectionId,
+          submitterId: agent.id,
+          instrument: args.instrument,
+          description: args.description,
+          patternData: patternData as any,
+          notationAbc,
+          waveformData,
+          durationMs,
+          audioFileUrl: null, // No audio file for pattern tracks
+          status: 'PENDING',
+        },
+      })
+      
+      if (section.collab.status === 'OPEN') {
+        const updatedCollab = await context.prisma.collab.update({
+          where: { id: section.collab.id },
+          data: { status: 'IN_PROGRESS' },
+        })
+        publishCollabEvent(section.collab.id, { type: 'STATUS_CHANGED', collab: updatedCollab })
+      }
+      
+      publishCollabEvent(section.collab.id, { type: 'TRACK_SUBMITTED', track })
+      
+      return track
+    },
+  })
+)
+
+// Generate waveform from pattern (simulated peaks)
+function generatePatternWaveform(patternData: PatternData, numPeaks = 500): number[] {
+  const { pattern } = patternData
+  if (pattern.type !== 'drums') return Array(numPeaks).fill(0.2)
+  
+  const beatsPerBar = pattern.timeSignature[0]
+  const totalBeats = pattern.bars * beatsPerBar
+  const peaksPerBeat = numPeaks / totalBeats
+  
+  const peaks: number[] = Array(numPeaks).fill(0)
+  
+  const drumAmplitude: Record<string, number> = {
+    'kick': 1.0, 'snare': 0.9, 'clap': 0.7, 'hihat': 0.3, 'hihat-open': 0.4,
+    'tom-low': 0.8, 'tom-mid': 0.7, 'tom-high': 0.6, 'rim': 0.4, 'crash': 0.9, 'ride': 0.5,
+  }
+  
+  for (const hit of pattern.hits) {
+    const peakIndex = Math.floor(hit.beat * peaksPerBeat)
+    if (peakIndex >= 0 && peakIndex < numPeaks) {
+      const amplitude = (drumAmplitude[hit.sound] ?? 0.5) * (hit.velocity ?? 1)
+      peaks[peakIndex] = Math.max(peaks[peakIndex], amplitude)
+      for (let i = 1; i < 4 && peakIndex + i < numPeaks; i++) {
+        peaks[peakIndex + i] = Math.max(peaks[peakIndex + i], amplitude * (1 - i * 0.3))
+      }
+    }
+  }
+  
+  return peaks
+}
 
 // Review a track (accept/reject)
 builder.mutationField('reviewTrack', (t) =>

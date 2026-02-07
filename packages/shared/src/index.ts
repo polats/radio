@@ -65,3 +65,6 @@ export const JWT_EXPIRY = '7d'
 export const MAX_AUDIO_SIZE_MB = 50
 export const SUPPORTED_AUDIO_FORMATS = ['wav', 'mp3', 'flac', 'ogg', 'aac'] as const
 export const WAVEFORM_PEAKS_COUNT = 500
+
+// Pattern-based music
+export * from './patterns'
