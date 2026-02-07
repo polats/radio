@@ -43,13 +43,13 @@ export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps
 
   return (
     <div className="flex flex-col h-full bg-zinc-900/50 rounded-lg border border-zinc-800">
-      <div className="px-3 py-2 border-b border-zinc-800">
+      <div className="px-3 py-2 border-b border-zinc-800 flex-shrink-0">
         <h3 className="text-sm font-medium text-zinc-400">💬 Chat</h3>
       </div>
       
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 space-y-3"
+        className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0"
       >
         {messages.length === 0 ? (
           <div className="text-center text-zinc-600 text-sm py-8">
@@ -66,8 +66,8 @@ export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium text-zinc-300">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-zinc-300 truncate max-w-[120px]">
                     {msg.author.displayName || msg.author.walletAddress.slice(0, 8)}
                   </span>
                   <span className="text-[10px] text-zinc-600">
@@ -81,16 +81,16 @@ export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps
         )}
       </div>
       
-      <form onSubmit={handleSubmit} className="p-2 border-t border-zinc-800 flex gap-2">
+      <form onSubmit={handleSubmit} className="p-2 border-t border-zinc-800 flex gap-2 flex-shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600 min-w-0"
           disabled={isLoading}
         />
-        <Button type="submit" size="sm" disabled={!input.trim() || isLoading}>
+        <Button type="submit" size="sm" disabled={!input.trim() || isLoading} className="flex-shrink-0">
           <Send className="w-4 h-4" />
         </Button>
       </form>

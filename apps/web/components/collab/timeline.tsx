@@ -38,7 +38,9 @@ interface TimelineProps {
   onAddTrack?: () => void
 }
 
-const PIXELS_PER_SECOND = 50
+// Responsive pixels per second
+const PIXELS_PER_SECOND_DESKTOP = 50
+const PIXELS_PER_SECOND_MOBILE = 30
 
 export function Timeline({ 
   tracks, 
@@ -51,9 +53,22 @@ export function Timeline({
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  
+  // Use smaller scale on mobile
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check on mount (client-side only)
+  if (typeof window !== 'undefined' && !isMobile && window.innerWidth < 768) {
+    setIsMobile(true)
+  }
+  
+  const pixelsPerSecond = isMobile ? PIXELS_PER_SECOND_MOBILE : PIXELS_PER_SECOND_DESKTOP
+  const labelWidth = isMobile ? 80 : 128
+  const statusWidth = isMobile ? 32 : 40
 
-  const timelineWidth = (durationMs / 1000) * PIXELS_PER_SECOND
-  const trackAreaHeight = Math.max(tracks.length * 56 + 56, 200) // 56px per track + add button
+  const timelineWidth = (durationMs / 1000) * pixelsPerSecond
+  const trackHeight = isMobile ? 48 : 56
+  const trackAreaHeight = Math.max(tracks.length * trackHeight + trackHeight, 150)
 
   const handlePlay = () => setIsPlaying(true)
   const handlePause = () => setIsPlaying(false)
@@ -64,27 +79,36 @@ export function Timeline({
   const handleSeek = (timeMs: number) => setCurrentTimeMs(timeMs)
 
   return (
-    <div className="flex flex-col bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden">
+    <div className="flex flex-col bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden h-full">
       {/* Scrollable timeline area */}
       <div 
         ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden"
+        className="flex-1 overflow-x-auto overflow-y-auto"
       >
-        <div style={{ minWidth: timelineWidth + 142 }}> {/* 142 = label width + status width */}
+        <div style={{ minWidth: timelineWidth + labelWidth + statusWidth }}>
           {/* Ruler */}
-          <div className="flex">
-            <div className="w-32 flex-shrink-0 bg-zinc-900 border-b border-r border-zinc-700" />
-            <TimelineRuler durationMs={durationMs} pixelsPerSecond={PIXELS_PER_SECOND} />
-            <div className="w-10 flex-shrink-0 bg-zinc-900 border-b border-zinc-700" />
+          <div className="flex sticky top-0 z-10 bg-zinc-950">
+            <div 
+              className="flex-shrink-0 bg-zinc-900 border-b border-r border-zinc-700" 
+              style={{ width: labelWidth }}
+            />
+            <TimelineRuler durationMs={durationMs} pixelsPerSecond={pixelsPerSecond} />
+            <div 
+              className="flex-shrink-0 bg-zinc-900 border-b border-zinc-700" 
+              style={{ width: statusWidth }}
+            />
           </div>
           
           {/* Tracks with section overlay */}
-          <div className="relative" style={{ height: trackAreaHeight }}>
+          <div className="relative" style={{ minHeight: trackAreaHeight }}>
             {/* Section markers behind tracks */}
-            <div className="absolute left-32 right-10 top-0 bottom-0">
+            <div 
+              className="absolute top-0 bottom-0"
+              style={{ left: labelWidth, right: statusWidth }}
+            >
               <SectionMarkers 
                 sections={sections} 
-                pixelsPerSecond={PIXELS_PER_SECOND} 
+                pixelsPerSecond={pixelsPerSecond} 
                 height={trackAreaHeight}
               />
             </div>
@@ -92,7 +116,7 @@ export function Timeline({
             {/* Playhead */}
             <div 
               className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 pointer-events-none"
-              style={{ left: 128 + (currentTimeMs / 1000) * PIXELS_PER_SECOND }}
+              style={{ left: labelWidth + (currentTimeMs / 1000) * pixelsPerSecond }}
             />
             
             {/* Track lanes */}
@@ -100,26 +124,37 @@ export function Timeline({
               <TrackLane
                 key={track.id}
                 track={track}
-                pixelsPerSecond={PIXELS_PER_SECOND}
+                pixelsPerSecond={pixelsPerSecond}
                 isSelected={track.id === selectedTrackId}
                 onSelect={() => onSelectTrack(track.id)}
+                compact={isMobile}
+                labelWidth={labelWidth}
+                statusWidth={statusWidth}
               />
             ))}
             
             {/* Add track row */}
-            <div className="h-14 flex items-center border-b border-zinc-800">
-              <div className="w-32 flex-shrink-0 px-3 border-r border-zinc-800">
+            <div 
+              className="flex items-center border-b border-zinc-800"
+              style={{ height: trackHeight }}
+            >
+              <div 
+                className="flex-shrink-0 px-2 sm:px-3 border-r border-zinc-800"
+                style={{ width: labelWidth }}
+              >
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="w-full text-zinc-500 hover:text-zinc-300"
+                  className="w-full text-zinc-500 hover:text-zinc-300 text-xs sm:text-sm"
                   onClick={onAddTrack}
                 >
-                  <Plus className="w-4 h-4 mr-1" /> Add Track
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" /> 
+                  <span className="hidden sm:inline">Add Track</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </div>
               <div className="flex-1" />
-              <div className="w-10 flex-shrink-0" />
+              <div style={{ width: statusWidth }} />
             </div>
           </div>
         </div>
@@ -134,6 +169,7 @@ export function Timeline({
         onPause={handlePause}
         onStop={handleStop}
         onSeek={handleSeek}
+        compact={isMobile}
       />
     </div>
   )

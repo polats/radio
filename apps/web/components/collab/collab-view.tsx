@@ -5,6 +5,7 @@ import { Timeline } from './timeline'
 import { ChatPanel } from './chat-panel'
 import { TrackDetails } from './track-details'
 import { Button } from '@/components/ui/button'
+import { MessageSquare, Layers } from 'lucide-react'
 
 interface Track {
   id: string
@@ -88,6 +89,7 @@ export function CollabView({
   onAddTrack,
 }: CollabViewProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<'timeline' | 'chat'>('timeline')
   
   const selectedTrack = tracks.find(t => t.id === selectedTrackId) || null
   
@@ -99,60 +101,127 @@ export function CollabView({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">{collab.title}</h1>
-          <p className="text-sm text-zinc-400 mt-1">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold truncate">{collab.title}</h1>
+          <p className="text-sm text-zinc-400 mt-1 truncate">
             by {collab.creator.displayName || collab.creator.walletAddress.slice(0, 8)}
-            {collab.genre && <span className="mx-2">•</span>}
-            {collab.genre}
-            {collab.tempo && <span className="mx-2">•</span>}
-            {collab.tempo && `${collab.tempo} BPM`}
+            {collab.genre && <span className="mx-2 hidden sm:inline">•</span>}
+            {collab.genre && <span className="hidden sm:inline">{collab.genre}</span>}
+            {collab.tempo && <span className="mx-2 hidden sm:inline">•</span>}
+            {collab.tempo && <span className="hidden sm:inline">{collab.tempo} BPM</span>}
           </p>
+          {/* Mobile meta */}
+          <div className="flex gap-2 mt-1 sm:hidden text-xs text-zinc-500">
+            {collab.genre && <span>{collab.genre}</span>}
+            {collab.tempo && <span>{collab.tempo} BPM</span>}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 text-sm rounded-full border ${statusColors[collab.status]}`}>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full border ${statusColors[collab.status]}`}>
             {collab.status}
           </span>
           {isCreator && collab.status !== 'COMPLETED' && (
-            <Button size="sm">Finalize</Button>
+            <Button size="sm" className="hidden sm:flex">Finalize</Button>
           )}
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 grid grid-cols-[1fr,320px] gap-4 min-h-0">
-        {/* Timeline */}
-        <div className="min-h-0">
-          <Timeline
-            tracks={tracks}
-            sections={sections}
-            durationMs={durationMs}
-            selectedTrackId={selectedTrackId}
-            onSelectTrack={setSelectedTrackId}
-            onAddTrack={onAddTrack}
-          />
+      {/* Mobile panel toggle */}
+      <div className="flex gap-2 mb-3 lg:hidden">
+        <Button
+          variant={mobilePanel === 'timeline' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1"
+          onClick={() => setMobilePanel('timeline')}
+        >
+          <Layers className="w-4 h-4 mr-2" />
+          Tracks
+        </Button>
+        <Button
+          variant={mobilePanel === 'chat' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1"
+          onClick={() => setMobilePanel('chat')}
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Chat
+          {messages.length > 0 && (
+            <span className="ml-2 bg-zinc-700 px-1.5 py-0.5 rounded text-xs">
+              {messages.length}
+            </span>
+          )}
+        </Button>
+      </div>
+
+      {/* Main content - responsive layout */}
+      <div className="flex-1 min-h-0">
+        {/* Desktop: side by side */}
+        <div className="hidden lg:grid lg:grid-cols-[1fr,320px] gap-4 h-full">
+          {/* Timeline */}
+          <div className="min-h-0">
+            <Timeline
+              tracks={tracks}
+              sections={sections}
+              durationMs={durationMs}
+              selectedTrackId={selectedTrackId}
+              onSelectTrack={setSelectedTrackId}
+              onAddTrack={onAddTrack}
+            />
+          </div>
+
+          {/* Side panels */}
+          <div className="flex flex-col gap-4 min-h-0">
+            <div className="flex-1 min-h-0">
+              <ChatPanel 
+                messages={messages} 
+                onSendMessage={onSendMessage}
+              />
+            </div>
+            <div className="h-64">
+              <TrackDetails
+                track={selectedTrack}
+                isCreator={isCreator}
+                onAccept={onAcceptTrack}
+                onReject={onRejectTrack}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Side panels */}
-        <div className="flex flex-col gap-4 min-h-0">
-          {/* Chat */}
-          <div className="flex-1 min-h-0">
-            <ChatPanel 
-              messages={messages} 
-              onSendMessage={onSendMessage}
-            />
-          </div>
-          
-          {/* Track details */}
-          <div className="h-64">
-            <TrackDetails
-              track={selectedTrack}
-              isCreator={isCreator}
-              onAccept={onAcceptTrack}
-              onReject={onRejectTrack}
-            />
-          </div>
+        {/* Mobile/Tablet: tabbed panels */}
+        <div className="lg:hidden h-full flex flex-col">
+          {mobilePanel === 'timeline' ? (
+            <>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <Timeline
+                  tracks={tracks}
+                  sections={sections}
+                  durationMs={durationMs}
+                  selectedTrackId={selectedTrackId}
+                  onSelectTrack={setSelectedTrackId}
+                  onAddTrack={onAddTrack}
+                />
+              </div>
+              {selectedTrack && (
+                <div className="h-48 mt-3 flex-shrink-0">
+                  <TrackDetails
+                    track={selectedTrack}
+                    isCreator={isCreator}
+                    onAccept={onAcceptTrack}
+                    onReject={onRejectTrack}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex-1 min-h-0">
+              <ChatPanel 
+                messages={messages} 
+                onSendMessage={onSendMessage}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

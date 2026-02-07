@@ -12,6 +12,7 @@ interface TransportControlsProps {
   onPause: () => void
   onStop: () => void
   onSeek: (timeMs: number) => void
+  compact?: boolean
 }
 
 export function TransportControls({
@@ -22,6 +23,7 @@ export function TransportControls({
   onPause,
   onStop,
   onSeek,
+  compact = false,
 }: TransportControlsProps) {
   const [volume, setVolume] = useState(80)
   
@@ -37,39 +39,39 @@ export function TransportControls({
   }
 
   return (
-    <div className="flex items-center gap-4 px-4 py-3 bg-zinc-900 border-t border-zinc-800">
+    <div className={`flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 sm:py-3 bg-zinc-900 border-t border-zinc-800 ${compact ? 'flex-wrap' : ''}`}>
       {/* Play/Pause/Stop */}
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="sm"
-          className="w-10 h-10 rounded-full"
+          className={compact ? 'w-8 h-8' : 'w-10 h-10 rounded-full'}
           onClick={isPlaying ? onPause : onPlay}
         >
           {isPlaying ? (
-            <Pause className="w-5 h-5" />
+            <Pause className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
           ) : (
-            <Play className="w-5 h-5 ml-0.5" />
+            <Play className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} ml-0.5`} />
           )}
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          className="w-8 h-8"
+          className={compact ? 'w-8 h-8' : 'w-8 h-8'}
           onClick={onStop}
         >
-          <Square className="w-4 h-4" />
+          <Square className={compact ? 'w-3 h-3' : 'w-4 h-4'} />
         </Button>
       </div>
 
       {/* Time display */}
-      <div className="text-sm font-mono text-zinc-400 w-24">
+      <div className={`font-mono text-zinc-400 ${compact ? 'text-xs w-20' : 'text-sm w-24'}`}>
         {currentTime} / {totalTime}
       </div>
 
       {/* Progress bar */}
       <div 
-        className="flex-1 h-2 bg-zinc-800 rounded-full cursor-pointer group"
+        className="flex-1 h-2 bg-zinc-800 rounded-full cursor-pointer group min-w-[100px]"
         onClick={handleProgressClick}
       >
         <div 
@@ -80,8 +82,8 @@ export function TransportControls({
         </div>
       </div>
 
-      {/* Volume */}
-      <div className="flex items-center gap-2 w-32">
+      {/* Volume - hide on mobile */}
+      <div className="hidden sm:flex items-center gap-2 w-28">
         <Volume2 className="w-4 h-4 text-zinc-400" />
         <input
           type="range"

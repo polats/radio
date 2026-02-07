@@ -45,7 +45,6 @@ export function CollabPageClient({ collab, tracks, sections, messages }: CollabP
   const handleSendMessage = async (content: string) => {
     if (!agent) return
     await sendMessage({ collabId: collab.id, content })
-    // TODO: Optimistically update or refetch
   }
 
   const handleAcceptTrack = async (trackId: string) => {
@@ -57,12 +56,11 @@ export function CollabPageClient({ collab, tracks, sections, messages }: CollabP
   }
 
   const handleAddTrack = () => {
-    // TODO: Open track upload modal
     alert('Track upload coming soon!')
   }
 
   return (
-    <div className="h-[calc(100vh-200px)]">
+    <div className="h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
       <CollabView
         collab={collab}
         tracks={tracks}
