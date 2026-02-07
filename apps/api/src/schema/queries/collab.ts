@@ -46,6 +46,27 @@ builder.queryField('openCollabs', (t) =>
   })
 )
 
+// Get all collabs (for browsing)
+builder.queryField('allCollabs', (t) =>
+  t.field({
+    type: [CollabType],
+    args: {
+      status: t.arg({ type: CollabStatus, required: false }),
+      limit: t.arg.int({ required: false, defaultValue: 50 }),
+    },
+    resolve: async (_parent, args, context) => {
+      const where: any = {}
+      if (args.status) where.status = args.status
+      
+      return context.prisma.collab.findMany({
+        where,
+        take: args.limit ?? 50,
+        orderBy: { createdAt: 'desc' },
+      })
+    },
+  })
+)
+
 // Get collabs by creator
 builder.queryField('myCollabs', (t) =>
   t.field({

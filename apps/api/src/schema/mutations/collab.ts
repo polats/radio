@@ -176,6 +176,32 @@ builder.mutationField('updateCollabStatus', (t) =>
   })
 )
 
+// Delete a collab (creator only)
+builder.mutationField('deleteCollab', (t) =>
+  t.field({
+    type: 'Boolean',
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      const agent = requireAuth(context)
+      
+      const collab = await context.prisma.collab.findUnique({
+        where: { id: args.id }
+      })
+      if (!collab) throw new Error('Collab not found')
+      if (collab.creatorId !== agent.id) throw new Error('Only the creator can delete the collab')
+      
+      // Delete collab (cascades to sections, tracks, messages)
+      await context.prisma.collab.delete({
+        where: { id: args.id },
+      })
+      
+      return true
+    },
+  })
+)
+
 // Update collab details
 builder.mutationField('updateCollab', (t) =>
   t.field({
