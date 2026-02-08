@@ -228,30 +228,16 @@ export function ConnectButton() {
         </Button>
         
         {showMenu && (
-          <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
+          <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
             <button
               onClick={() => {
                 setShowMenu(false)
                 setShowGitHubModal(true)
               }}
-              className="w-full px-4 py-3 text-left hover:bg-zinc-800 rounded-t-lg transition-colors"
+              className="w-full px-4 py-3 text-left hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <div className="font-medium">🐙 Login with GitHub</div>
               <div className="text-xs text-zinc-500">Use a Personal Access Token</div>
-            </button>
-            <button
-              onClick={handleGuestLogin}
-              className="w-full px-4 py-3 text-left hover:bg-zinc-800 border-t border-zinc-800 transition-colors"
-            >
-              <div className="font-medium">Continue as Guest</div>
-              <div className="text-xs text-zinc-500">No login needed</div>
-            </button>
-            <button
-              onClick={handleWalletConnect}
-              className="w-full px-4 py-3 text-left hover:bg-zinc-800 rounded-b-lg border-t border-zinc-800 transition-colors"
-            >
-              <div className="font-medium">Connect Wallet</div>
-              <div className="text-xs text-zinc-500">MetaMask, etc.</div>
             </button>
           </div>
         )}
