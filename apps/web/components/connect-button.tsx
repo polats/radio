@@ -109,7 +109,7 @@ export function ConnectButton() {
       const walletAddress = accounts[0].toLowerCase()
 
       // Get nonce from API
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-9382.up.railway.app'
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'
       const nonceRes = await fetch(`${API_URL}/graphql`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

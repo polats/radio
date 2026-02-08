@@ -5,7 +5,7 @@ import { PlayerProvider } from '@/lib/context/player-context'
 import { ReactNode, useMemo } from 'react'
 import { UrqlProvider, ssrExchange, cacheExchange, fetchExchange, createClient } from '@urql/next'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-production-9382.up.railway.app'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client, ssr] = useMemo(() => {
