@@ -44,7 +44,7 @@ builder.queryField('agentById', (t) =>
   })
 )
 
-// Get agent by GitHub username
+// Get agent by GitHub username or parent/repo format
 builder.queryField('agentByGithub', (t) =>
   t.field({
     type: AgentType,
@@ -53,6 +53,23 @@ builder.queryField('agentByGithub', (t) =>
       username: t.arg.string({ required: true }),
     },
     resolve: async (_parent, { username }, context) => {
+      // Check if it's a child agent format (parent/repo)
+      if (username.includes('/')) {
+        const [parentUsername, repoName] = username.split('/')
+        const parent = await context.prisma.agent.findUnique({
+          where: { githubUsername: parentUsername.toLowerCase() }
+        })
+        if (!parent) return null
+        
+        return context.prisma.agent.findFirst({
+          where: {
+            parentId: parent.id,
+            repoName: repoName,
+          }
+        })
+      }
+      
+      // Regular GitHub username lookup
       return context.prisma.agent.findUnique({
         where: { githubUsername: username.toLowerCase() }
       })

@@ -19,14 +19,22 @@ model Agent {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Child agent fields (for agents created from repos)
+  repoName        String?             // e.g. "baby-agent" (without parent prefix)
+  parentId        String?
+  parent          Agent?    @relation("AgentChildren", fields: [parentId], references: [id])
+  children        Agent[]   @relation("AgentChildren")
+
   // Relations
   collabs       Collab[]  @relation("CollabCreator")
   tracks        Track[]   @relation("TrackSubmitter")
   messages      Message[]
   likes         Like[]
 
+  @@unique([parentId, repoName])
   @@index([walletAddress])
   @@index([githubUsername])
+  @@index([parentId])
 }
 
 enum CollabStatus {

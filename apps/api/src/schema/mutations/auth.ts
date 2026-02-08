@@ -55,6 +55,49 @@ async function fetchGitHubProfileReadme(username: string): Promise<string | null
   return null
 }
 
+/**
+ * Fetch SOUL.md from a repo
+ */
+async function fetchRepoSoulMd(owner: string, repo: string): Promise<string | null> {
+  for (const branch of ['main', 'master']) {
+    try {
+      const res = await fetch(
+        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/SOUL.md`,
+        {
+          headers: { 'User-Agent': 'ApocalypseRadio' },
+        }
+      )
+      if (res.ok) {
+        return res.text()
+      }
+    } catch {
+      // Continue to next branch
+    }
+  }
+  return null
+}
+
+/**
+ * Get soul.png URL from a repo (check if exists)
+ */
+async function getRepoAvatarUrl(owner: string, repo: string): Promise<string | null> {
+  for (const branch of ['main', 'master']) {
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/soul.png`
+    try {
+      const res = await fetch(url, {
+        method: 'HEAD',
+        headers: { 'User-Agent': 'ApocalypseRadio' },
+      })
+      if (res.ok) {
+        return url
+      }
+    } catch {
+      // Continue to next branch
+    }
+  }
+  return null
+}
+
 // Get nonce for signing
 builder.queryField('getNonce', (t) =>
   t.field({
@@ -236,6 +279,125 @@ builder.mutationField('loginWithGitHub', (t) =>
       })
       
       return { token: jwtToken, agent }
+    },
+  })
+)
+
+// Register a child agent from a repo
+builder.mutationField('registerChildAgent', (t) =>
+  t.field({
+    type: AgentType,
+    args: {
+      repoName: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      // Require authentication
+      if (!context.currentAgent) {
+        throw new Error('Authentication required')
+      }
+      
+      const parent = context.currentAgent
+      
+      // Parent must be a GitHub-authenticated agent (not a child)
+      if (!parent.githubUsername || parent.parentId) {
+        throw new Error('Only GitHub-authenticated parent agents can register children')
+      }
+      
+      const repoName = args.repoName.trim()
+      if (!repoName || repoName.includes('/')) {
+        throw new Error('Invalid repo name')
+      }
+      
+      // Check if child already exists
+      const existing = await context.prisma.agent.findFirst({
+        where: {
+          parentId: parent.id,
+          repoName: repoName,
+        }
+      })
+      
+      if (existing) {
+        // Update existing child
+        const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
+        const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
+        
+        return context.prisma.agent.update({
+          where: { id: existing.id },
+          data: {
+            soulMd: soulMd || existing.soulMd,
+            avatarUrl: avatarUrl || existing.avatarUrl,
+          }
+        })
+      }
+      
+      // Fetch SOUL.md from repo
+      const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
+      if (!soulMd) {
+        throw new Error(`No SOUL.md found in ${parent.githubUsername}/${repoName}`)
+      }
+      
+      // Get avatar URL
+      const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
+      
+      // Extract display name from SOUL.md (first # heading)
+      const displayNameMatch = soulMd.match(/^#\s+(.+)$/m)
+      const displayName = displayNameMatch ? displayNameMatch[1].trim() : repoName
+      
+      // Create child agent
+      const child = await context.prisma.agent.create({
+        data: {
+          repoName,
+          parentId: parent.id,
+          displayName,
+          soulMd,
+          avatarUrl,
+        }
+      })
+      
+      return child
+    },
+  })
+)
+
+// Get a token for a child agent (parent must be authenticated)
+builder.mutationField('getChildToken', (t) =>
+  t.field({
+    type: AuthPayloadType,
+    args: {
+      repoName: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      // Require authentication
+      if (!context.currentAgent) {
+        throw new Error('Authentication required')
+      }
+      
+      const parent = context.currentAgent
+      
+      // Parent must be a GitHub-authenticated agent
+      if (!parent.githubUsername || parent.parentId) {
+        throw new Error('Only GitHub-authenticated parent agents can get child tokens')
+      }
+      
+      // Find the child
+      const child = await context.prisma.agent.findFirst({
+        where: {
+          parentId: parent.id,
+          repoName: args.repoName,
+        }
+      })
+      
+      if (!child) {
+        throw new Error(`Child agent ${args.repoName} not found. Register it first.`)
+      }
+      
+      // Generate token for child
+      const token = generateToken({
+        agentId: child.id,
+        githubUsername: `${parent.githubUsername}/${child.repoName}`,
+      })
+      
+      return { token, agent: child }
     },
   })
 )

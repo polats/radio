@@ -36,33 +36,15 @@ const AGENT_BY_GITHUB_QUERY = gql`
   }
 `
 
-const AGENT_STATS_QUERY = gql`
-  query AgentStats($agentId: String!) {
-    agentById(id: $agentId) {
-      id
-    }
-  }
-`
-
-// We'll need to add these queries to the API later
-const AGENT_COLLABS_QUERY = gql`
-  query AgentCollabs($creatorId: String!) {
-    collabs(creatorId: $creatorId, limit: 10) {
-      id
-      title
-      status
-      createdAt
-    }
-  }
-`
-
-export default function ProfilePage() {
+export default function ChildProfilePage() {
   const params = useParams()
-  const username = params.username as string
+  const parentUsername = params.username as string
+  const repoName = params.repo as string
+  const fullUsername = `${parentUsername}/${repoName}`
 
   const [{ data, fetching, error }] = useQuery({
     query: AGENT_BY_GITHUB_QUERY,
-    variables: { username: username.toLowerCase() },
+    variables: { username: fullUsername },
   })
 
   if (fetching) {
@@ -87,12 +69,12 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <div className="text-6xl">🤷</div>
-        <h1 className="text-2xl font-bold">User not found</h1>
+        <h1 className="text-2xl font-bold">Agent not found</h1>
         <p className="text-zinc-400">
-          No user with GitHub username <span className="font-mono text-white">@{username}</span> exists.
+          No child agent <span className="font-mono text-white">@{fullUsername}</span> exists.
         </p>
-        <Link href="/" className="text-blue-400 hover:underline">
-          ← Back to home
+        <Link href={`/profile/${parentUsername}`} className="text-blue-400 hover:underline">
+          ← Back to @{parentUsername}
         </Link>
       </div>
     )
@@ -104,21 +86,13 @@ export default function ProfilePage() {
     day: 'numeric',
   })
 
-  // Determine if this is a child agent
-  const isChild = !!agent.parentId
   const profileAvatar = agent.avatarUrl || agent.githubAvatarUrl
-  const profileUsername = isChild && agent.parent 
-    ? `${agent.parent.githubUsername}/${agent.repoName}`
-    : agent.githubUsername
-
-  // For image URL resolution in markdown
-  const repoOwner = isChild && agent.parent ? agent.parent.githubUsername : agent.githubUsername
-  const repoName = isChild ? agent.repoName : agent.githubUsername
+  const repoOwner = agent.parent?.githubUsername || parentUsername
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Parent Link (for child agents) */}
-      {isChild && agent.parent && (
+      {/* Parent Link */}
+      {agent.parent && (
         <div className="mb-4">
           <Link 
             href={`/profile/${agent.parent.githubUsername}`}
@@ -141,7 +115,7 @@ export default function ProfilePage() {
         {profileAvatar ? (
           <img
             src={profileAvatar}
-            alt={profileUsername || 'Agent'}
+            alt={fullUsername}
             className="w-24 h-24 rounded-full border-2 border-zinc-700"
           />
         ) : (
@@ -152,34 +126,23 @@ export default function ProfilePage() {
         
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-1">
-            {agent.displayName || profileUsername}
+            {agent.displayName || repoName}
           </h1>
-          {isChild && agent.parent ? (
-            <a
-              href={`https://github.com/${agent.parent.githubUsername}/${agent.repoName}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              @{profileUsername}
-            </a>
-          ) : agent.githubUsername ? (
-            <a
-              href={`https://github.com/${agent.githubUsername}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              @{agent.githubUsername}
-            </a>
-          ) : null}
+          <a
+            href={`https://github.com/${fullUsername}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            @{fullUsername}
+          </a>
           <p className="text-zinc-500 text-sm mt-2">
             Joined {joinDate}
           </p>
         </div>
       </div>
 
-      {/* Stats (placeholder - would need additional queries) */}
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-center">
           <div className="text-2xl font-bold">-</div>
@@ -195,7 +158,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Soul.md (GitHub Profile README) */}
+      {/* Soul.md */}
       {agent.soulMd ? (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -205,7 +168,6 @@ export default function ProfilePage() {
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
               components={{
-                // Override link styling
                 a: ({ children, href }) => (
                   <a 
                     href={href} 
@@ -216,10 +178,8 @@ export default function ProfilePage() {
                     {children}
                   </a>
                 ),
-                // Make images responsive + fix relative URLs to GitHub raw
                 img: ({ src, alt }) => {
                   let imageSrc = typeof src === 'string' ? src : ''
-                  // Convert relative paths to GitHub raw URLs
                   if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
                     imageSrc = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imageSrc}`
                   }
@@ -231,7 +191,6 @@ export default function ProfilePage() {
                     />
                   )
                 },
-                // Style code blocks
                 code: ({ children, className }) => {
                   const isInline = !className
                   return isInline ? (
@@ -242,7 +201,6 @@ export default function ProfilePage() {
                     <code className={className}>{children}</code>
                   )
                 },
-                // Style pre blocks
                 pre: ({ children }) => (
                   <pre className="bg-zinc-800 p-4 rounded-lg overflow-x-auto">
                     {children}
@@ -256,50 +214,7 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center text-zinc-500">
-          <p>No {isChild ? 'SOUL.md' : 'GitHub profile README'} found.</p>
-          {!isChild && (
-            <p className="text-sm mt-2">
-              Create a repo named <span className="font-mono text-white">{agent.githubUsername}</span> with a README.md to show your soul here.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Children Section (for parent agents) */}
-      {agent.children && agent.children.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span>👶</span> Children ({agent.children.length})
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {agent.children.map((child: any) => (
-              <Link
-                key={child.id}
-                href={`/profile/${agent.githubUsername}/${child.repoName}`}
-                className="group"
-              >
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-center hover:border-purple-500/50 transition-colors">
-                  {child.avatarUrl ? (
-                    <img
-                      src={child.avatarUrl}
-                      alt={child.displayName}
-                      className="w-16 h-16 rounded-full mx-auto mb-2 group-hover:ring-2 ring-purple-500 transition-all"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-zinc-800 mx-auto mb-2 flex items-center justify-center text-2xl">
-                      🤖
-                    </div>
-                  )}
-                  <div className="font-medium text-sm truncate group-hover:text-purple-400 transition-colors">
-                    {child.displayName || child.repoName}
-                  </div>
-                  <div className="text-xs text-zinc-500 truncate">
-                    {child.repoName}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <p>No SOUL.md found.</p>
         </div>
       )}
     </div>

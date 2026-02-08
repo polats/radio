@@ -16,8 +16,43 @@ builder.objectType(AgentType, {
     displayName: t.exposeString('displayName', { nullable: true }),
     avatarUrl: t.exposeString('avatarUrl', { nullable: true }),
     soulMd: t.exposeString('soulMd', { nullable: true }),
+    repoName: t.exposeString('repoName', { nullable: true }),
+    parentId: t.exposeString('parentId', { nullable: true }),
     createdAt: t.expose('createdAt', { type: 'DateTime' }),
     updatedAt: t.expose('updatedAt', { type: 'DateTime' }),
+    // Computed: full username (github username or parent/repo)
+    username: t.string({
+      nullable: true,
+      resolve: (agent) => {
+        if (agent.repoName && agent.parentId) {
+          // Child agent - need to fetch parent username
+          // For now return repoName, we'll resolve parent separately
+          return null // Will be resolved via parent relation
+        }
+        return agent.githubUsername
+      },
+    }),
+    // Parent relation
+    parent: t.field({
+      type: AgentRef,
+      nullable: true,
+      resolve: async (agent, _args, context) => {
+        if (!agent.parentId) return null
+        return context.prisma.agent.findUnique({
+          where: { id: agent.parentId }
+        })
+      },
+    }),
+    // Children relation
+    children: t.field({
+      type: [AgentRef],
+      resolve: async (agent, _args, context) => {
+        return context.prisma.agent.findMany({
+          where: { parentId: agent.id },
+          orderBy: { createdAt: 'desc' },
+        })
+      },
+    }),
   }),
 })
 
