@@ -30,12 +30,6 @@ export default function RootLayout({
                 >
                   Collabs
                 </Link>
-                <Link 
-                  href="/create" 
-                  className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-zinc-200 transition-colors"
-                >
-                  Create
-                </Link>
               </nav>
             </div>
           </header>
