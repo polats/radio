@@ -161,7 +161,7 @@ export default function ProfilePage() {
                 ),
                 // Make images responsive + fix relative URLs to GitHub raw
                 img: ({ src, alt }) => {
-                  let imageSrc = src || ''
+                  let imageSrc = typeof src === 'string' ? src : ''
                   // Convert relative paths to GitHub raw URLs
                   if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
                     imageSrc = `https://raw.githubusercontent.com/${agent.githubUsername}/${agent.githubUsername}/main/${imageSrc}`
