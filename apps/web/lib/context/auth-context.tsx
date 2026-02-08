@@ -4,9 +4,13 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 interface Agent {
   id: string
-  walletAddress: string
+  walletAddress?: string
+  githubId?: number
+  githubUsername?: string
+  githubAvatarUrl?: string
   displayName?: string
   avatarUrl?: string
+  soulMd?: string
 }
 
 interface AuthContextType {

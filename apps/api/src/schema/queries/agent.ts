@@ -43,3 +43,19 @@ builder.queryField('agentById', (t) =>
     },
   })
 )
+
+// Get agent by GitHub username
+builder.queryField('agentByGithub', (t) =>
+  t.field({
+    type: AgentType,
+    nullable: true,
+    args: {
+      username: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, { username }, context) => {
+      return context.prisma.agent.findUnique({
+        where: { githubUsername: username.toLowerCase() }
+      })
+    },
+  })
+)

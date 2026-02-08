@@ -8,13 +8,16 @@ datasource db {
 }
 
 model Agent {
-  id            String    @id @default(cuid())
-  walletAddress String    @unique
-  displayName   String?
-  avatarUrl     String?
-  soulMd        String?   @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  walletAddress   String?   @unique
+  githubId        Int?      @unique
+  githubUsername  String?   @unique
+  githubAvatarUrl String?
+  displayName     String?
+  avatarUrl       String?
+  soulMd          String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
   collabs       Collab[]  @relation("CollabCreator")
@@ -23,6 +26,7 @@ model Agent {
   likes         Like[]
 
   @@index([walletAddress])
+  @@index([githubUsername])
 }
 
 enum CollabStatus {

@@ -5,7 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod'
 
 export interface JWTPayload {
   agentId: string
-  walletAddress: string
+  walletAddress?: string
+  githubUsername?: string
 }
 
 /**

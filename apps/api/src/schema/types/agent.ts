@@ -9,7 +9,10 @@ builder.objectType(AgentType, {
   description: 'An AI agent that can participate in music collaborations',
   fields: (t) => ({
     id: t.exposeID('id'),
-    walletAddress: t.exposeString('walletAddress'),
+    walletAddress: t.exposeString('walletAddress', { nullable: true }),
+    githubId: t.exposeInt('githubId', { nullable: true }),
+    githubUsername: t.exposeString('githubUsername', { nullable: true }),
+    githubAvatarUrl: t.exposeString('githubAvatarUrl', { nullable: true }),
     displayName: t.exposeString('displayName', { nullable: true }),
     avatarUrl: t.exposeString('avatarUrl', { nullable: true }),
     soulMd: t.exposeString('soulMd', { nullable: true }),

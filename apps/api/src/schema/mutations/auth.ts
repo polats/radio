@@ -3,6 +3,58 @@ import { AgentType, AuthPayloadType, NoncePayloadType } from '../types/agent.js'
 import { generateNonceMessage, verifyAuthSignature } from '../../auth/verify.js'
 import { generateToken } from '../../auth/jwt.js'
 
+interface GitHubUser {
+  id: number
+  login: string
+  name: string | null
+  avatar_url: string
+}
+
+/**
+ * Fetch GitHub user info using a Personal Access Token
+ */
+async function fetchGitHubUser(token: string): Promise<GitHubUser> {
+  const res = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'ApocalypseRadio',
+    },
+  })
+  
+  if (!res.ok) {
+    const error = await res.text()
+    throw new Error(`GitHub API error: ${res.status} ${error}`)
+  }
+  
+  return res.json()
+}
+
+/**
+ * Fetch a user's profile README (their soul.md)
+ */
+async function fetchGitHubProfileReadme(username: string): Promise<string | null> {
+  // Try main branch first, then master
+  for (const branch of ['main', 'master']) {
+    try {
+      const res = await fetch(
+        `https://raw.githubusercontent.com/${username}/${username}/${branch}/README.md`,
+        {
+          headers: {
+            'User-Agent': 'ApocalypseRadio',
+          },
+        }
+      )
+      if (res.ok) {
+        return res.text()
+      }
+    } catch {
+      // Continue to next branch
+    }
+  }
+  return null
+}
+
 // Get nonce for signing
 builder.queryField('getNonce', (t) =>
   t.field({
@@ -58,7 +110,7 @@ builder.mutationField('register', (t) =>
       // Generate token
       const token = generateToken({
         agentId: agent.id,
-        walletAddress: agent.walletAddress,
+        walletAddress: agent.walletAddress ?? undefined,
       })
       
       return { token, agent }
@@ -95,7 +147,7 @@ builder.mutationField('authenticate', (t) =>
       // Generate token
       const token = generateToken({
         agentId: agent.id,
-        walletAddress: agent.walletAddress,
+        walletAddress: agent.walletAddress ?? undefined,
       })
       
       return { token, agent }
@@ -126,10 +178,64 @@ builder.mutationField('loginAsGuest', (t) =>
       // Generate token
       const token = generateToken({
         agentId: agent.id,
-        walletAddress: agent.walletAddress,
+        walletAddress: agent.walletAddress ?? undefined,
       })
       
       return { token, agent }
+    },
+  })
+)
+
+// GitHub PAT login
+builder.mutationField('loginWithGitHub', (t) =>
+  t.field({
+    type: AuthPayloadType,
+    args: {
+      token: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, args, context) => {
+      // Fetch GitHub user info
+      const githubUser = await fetchGitHubUser(args.token)
+      
+      // Fetch profile README as soul.md
+      const soulMd = await fetchGitHubProfileReadme(githubUser.login)
+      
+      // Find or create agent by GitHub ID
+      let agent = await context.prisma.agent.findUnique({
+        where: { githubId: githubUser.id }
+      })
+      
+      if (agent) {
+        // Update existing agent with latest GitHub info
+        agent = await context.prisma.agent.update({
+          where: { id: agent.id },
+          data: {
+            githubUsername: githubUser.login,
+            githubAvatarUrl: githubUser.avatar_url,
+            displayName: githubUser.name || githubUser.login,
+            soulMd: soulMd || agent.soulMd,
+          }
+        })
+      } else {
+        // Create new agent
+        agent = await context.prisma.agent.create({
+          data: {
+            githubId: githubUser.id,
+            githubUsername: githubUser.login,
+            githubAvatarUrl: githubUser.avatar_url,
+            displayName: githubUser.name || githubUser.login,
+            soulMd,
+          }
+        })
+      }
+      
+      // Generate JWT
+      const jwtToken = generateToken({
+        agentId: agent.id,
+        githubUsername: agent.githubUsername!,
+      })
+      
+      return { token: jwtToken, agent }
     },
   })
 )
