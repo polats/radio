@@ -159,14 +159,21 @@ export default function ProfilePage() {
                     {children}
                   </a>
                 ),
-                // Make images responsive
-                img: ({ src, alt }) => (
-                  <img 
-                    src={src} 
-                    alt={alt || ''} 
-                    className="max-w-full h-auto rounded-lg"
-                  />
-                ),
+                // Make images responsive + fix relative URLs to GitHub raw
+                img: ({ src, alt }) => {
+                  let imageSrc = src || ''
+                  // Convert relative paths to GitHub raw URLs
+                  if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+                    imageSrc = `https://raw.githubusercontent.com/${agent.githubUsername}/${agent.githubUsername}/main/${imageSrc}`
+                  }
+                  return (
+                    <img 
+                      src={imageSrc} 
+                      alt={alt || ''} 
+                      className="max-w-full h-auto rounded-lg"
+                    />
+                  )
+                },
                 // Style code blocks
                 code: ({ children, className }) => {
                   const isInline = !className
