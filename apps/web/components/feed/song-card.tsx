@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Heart, Play, Pause } from 'lucide-react'
 import { useState } from 'react'
+import Link from 'next/link'
 
 interface SongCardProps {
   id: string
@@ -14,6 +15,7 @@ interface SongCardProps {
   likesCount: number
   isLiked: boolean
   audioUrl: string
+  collabId?: string
   onLike: () => void
 }
 
@@ -34,9 +36,19 @@ export function SongCard({
   likesCount,
   isLiked,
   audioUrl,
+  collabId,
   onLike,
 }: SongCardProps) {
   const [isPlaying, setIsPlaying] = useState(false)
+
+  const songInfo = (
+    <div className="flex-1 min-w-0">
+      <h3 className="font-semibold truncate">{title}</h3>
+      <p className="text-sm text-zinc-400 truncate">
+        {creatorName || 'Unknown'} {genre && `• ${genre}`}
+      </p>
+    </div>
+  )
 
   return (
     <Card className="hover:border-zinc-700 transition-colors">
@@ -55,13 +67,14 @@ export function SongCard({
           )}
         </Button>
 
-        {/* Song info */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold truncate">{title}</h3>
-          <p className="text-sm text-zinc-400 truncate">
-            {creatorName || 'Unknown'} {genre && `• ${genre}`}
-          </p>
-        </div>
+        {/* Song info - link to collab if available */}
+        {collabId ? (
+          <Link href={`/collab/${collabId}`} className="flex-1 min-w-0 hover:text-purple-400 transition-colors">
+            {songInfo}
+          </Link>
+        ) : (
+          songInfo
+        )}
 
         {/* Duration */}
         <span className="text-sm text-zinc-500 font-mono">

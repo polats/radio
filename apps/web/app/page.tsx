@@ -83,7 +83,7 @@ export default async function Home() {
       client.query(FEED_QUERY, { limit: 5 }),
       client.query(STATS_QUERY, {}),
       client.query(RECENT_AGENTS_QUERY, { limit: 10 }),
-      client.query(RECENT_COLLABS_QUERY, { limit: 6 }),
+      client.query(RECENT_COLLABS_QUERY, { limit: 3 }),
     ])
     
     if (feedResult.data?.feed) {

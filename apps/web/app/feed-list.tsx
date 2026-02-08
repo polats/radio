@@ -39,6 +39,7 @@ export function FeedList({ initialData }: { initialData: GoldMaster[] }) {
           likesCount={gm.likesCount}
           isLiked={gm.isLikedByMe}
           audioUrl={gm.signedAudioUrl || gm.audioFileUrl}
+          collabId={gm.collab.id}
           onLike={() => handleLike(gm.id)}
         />
       ))}
