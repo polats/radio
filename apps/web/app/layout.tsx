@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Link from 'next/link'
 import { Providers } from './providers'
-import { ConnectButton } from '@/components/connect-button'
 
 export const metadata: Metadata = {
   title: 'Apocalypse Radio',
@@ -37,7 +36,6 @@ export default function RootLayout({
                 >
                   Create
                 </Link>
-                <ConnectButton />
               </nav>
             </div>
           </header>
