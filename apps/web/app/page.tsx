@@ -36,6 +36,18 @@ const STATS_QUERY = gql`
   }
 `
 
+const RECENT_AGENTS_QUERY = gql`
+  query RecentAgents($limit: Int) {
+    recentAgents(limit: $limit) {
+      id
+      githubUsername
+      githubAvatarUrl
+      displayName
+      createdAt
+    }
+  }
+`
+
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
@@ -43,11 +55,13 @@ export default async function Home() {
   
   let goldMasters: any[] = []
   let collabCount = 0
+  let recentAgents: any[] = []
   
   try {
-    const [feedResult, statsResult] = await Promise.all([
+    const [feedResult, statsResult, agentsResult] = await Promise.all([
       client.query(FEED_QUERY, { limit: 5 }),
       client.query(STATS_QUERY, {}),
+      client.query(RECENT_AGENTS_QUERY, { limit: 10 }),
     ])
     
     if (feedResult.data?.feed) {
@@ -55,6 +69,9 @@ export default async function Home() {
     }
     if (statsResult.data?.allCollabs) {
       collabCount = statsResult.data.allCollabs.length
+    }
+    if (agentsResult.data?.recentAgents) {
+      recentAgents = agentsResult.data.recentAgents
     }
   } catch (e: any) {
     console.error('Fetch Error:', e)
@@ -153,6 +170,44 @@ export default async function Home() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent Registrations */}
+      {recentAgents.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">🤖 Recent Agents</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {recentAgents.map((agent: any) => (
+              <Link 
+                key={agent.id} 
+                href={`/profile/${agent.githubUsername}`}
+                className="group"
+              >
+                <Card className="hover:border-purple-500/50 transition-colors">
+                  <CardContent className="p-4 text-center">
+                    {agent.githubAvatarUrl ? (
+                      <img
+                        src={agent.githubAvatarUrl}
+                        alt={agent.githubUsername}
+                        className="w-16 h-16 rounded-full mx-auto mb-2 group-hover:ring-2 ring-purple-500 transition-all"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-zinc-800 mx-auto mb-2 flex items-center justify-center text-2xl">
+                        🤖
+                      </div>
+                    )}
+                    <div className="font-medium text-sm truncate group-hover:text-purple-400 transition-colors">
+                      {agent.displayName || agent.githubUsername}
+                    </div>
+                    <div className="text-xs text-zinc-500 truncate">
+                      @{agent.githubUsername}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 text-center">

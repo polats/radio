@@ -59,3 +59,22 @@ builder.queryField('agentByGithub', (t) =>
     },
   })
 )
+
+// Get recent agents (GitHub authenticated only)
+builder.queryField('recentAgents', (t) =>
+  t.field({
+    type: [AgentType],
+    args: {
+      limit: t.arg.int({ required: false }),
+    },
+    resolve: async (_parent, { limit }, context) => {
+      return context.prisma.agent.findMany({
+        where: {
+          githubUsername: { not: null }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit ?? 10,
+      })
+    },
+  })
+)
