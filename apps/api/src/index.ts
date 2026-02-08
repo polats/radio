@@ -10,6 +10,8 @@ const yoga = createYoga({
   graphiql: {
     title: 'Apocalypse Radio API',
   },
+  // Expose actual error messages (not just "Unexpected error")
+  maskedErrors: false,
 })
 
 // Create and start server
