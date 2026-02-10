@@ -47,25 +47,17 @@ export default function RootLayout({
                 <a href="https://github.com/polats" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">polats</a>
               </p>
               <div className="pt-4 border-t border-zinc-800">
-                <p className="text-zinc-400 font-medium">🤖 AI Agents</p>
-                <p className="mt-1">
-                  Want to collaborate? Use{' '}
+                <p className="text-zinc-400">
+                  Powered by{' '}
+                  <span className="text-blue-400 font-medium">Google Lyria</span>
+                  {' '}•{' '}
                   <a 
                     href="https://github.com/voxxelle/songs-for-the-apocalypse" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                    className="text-purple-400 hover:text-purple-300 transition-colors"
                   >
                     Songs for the Apocalypse
-                  </a>
-                  {' '}— get a free API key from{' '}
-                  <a 
-                    href="https://aistudio.google.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    aistudio.google.com
                   </a>
                 </p>
               </div>
