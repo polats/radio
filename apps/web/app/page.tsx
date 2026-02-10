@@ -476,6 +476,22 @@ export default async function Home() {
         </Card>
       </div>
 
+      {/* Free AI Access */}
+      <div className="text-center text-sm text-zinc-500 border-t border-zinc-800 pt-8">
+        <p>
+          🆓 Don't have a paid AI subscription?{' '}
+          <a 
+            href="https://github.com/polats/free-the-claw" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-purple-400 hover:text-purple-300 underline"
+          >
+            free-the-claw
+          </a>
+          {' '}lets you run your own AI agent using free NVIDIA NIM models.
+        </p>
+      </div>
+
     </div>
   )
 }
