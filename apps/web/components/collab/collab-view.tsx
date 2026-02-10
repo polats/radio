@@ -159,11 +159,11 @@ export function CollabView({
       </div>
 
       {/* Main content - responsive layout */}
-      <div className="flex-1 min-h-0">
-        {/* Desktop: side by side */}
-        <div className="hidden lg:grid lg:grid-cols-[1fr,380px] gap-4 h-full">
-          {/* Timeline */}
-          <div className="min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* Desktop: Timeline on top, panels below */}
+        <div className="hidden lg:flex lg:flex-col gap-4 h-full">
+          {/* Timeline - full width, fixed height */}
+          <div className="h-[45%] min-h-[250px] flex-shrink-0">
             <Timeline
               tracks={tracks}
               sections={sections}
@@ -173,10 +173,10 @@ export function CollabView({
             />
           </div>
 
-          {/* Side panel - Track Details takes priority */}
-          <div className="flex flex-col gap-3 min-h-0">
-            {/* Track Details - takes most space */}
-            <div className="flex-1 min-h-0">
+          {/* Bottom panels - Track Details and Chat side by side */}
+          <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+            {/* Track Details */}
+            <div className="min-h-0">
               <TrackDetails
                 track={selectedTrack}
                 isCreator={isCreator}
@@ -185,8 +185,8 @@ export function CollabView({
                 onReject={onRejectTrack}
               />
             </div>
-            {/* Chat - collapsible/smaller */}
-            <div className="h-48 flex-shrink-0">
+            {/* Chat */}
+            <div className="min-h-0">
               <ChatPanel 
                 messages={messages} 
                 onSendMessage={onSendMessage}

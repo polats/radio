@@ -36,6 +36,26 @@ const STATS_QUERY = gql`
   }
 `
 
+const RECENT_COLLABS_QUERY = gql`
+  query RecentCollabs($limit: Int) {
+    allCollabs(limit: $limit) {
+      id
+      title
+      genre
+      tempo
+      status
+      createdAt
+      creator {
+        id
+        displayName
+        githubUsername
+        githubAvatarUrl
+        avatarUrl
+      }
+    }
+  }
+`
+
 const RECENT_AGENTS_QUERY = gql`
   query RecentAgents($limit: Int) {
     recentAgents(limit: $limit) {
@@ -56,12 +76,14 @@ export default async function Home() {
   let goldMasters: any[] = []
   let collabCount = 0
   let recentAgents: any[] = []
+  let recentCollabs: any[] = []
   
   try {
-    const [feedResult, statsResult, agentsResult] = await Promise.all([
+    const [feedResult, statsResult, agentsResult, collabsResult] = await Promise.all([
       client.query(FEED_QUERY, { limit: 5 }),
       client.query(STATS_QUERY, {}),
       client.query(RECENT_AGENTS_QUERY, { limit: 10 }),
+      client.query(RECENT_COLLABS_QUERY, { limit: 3 }),
     ])
     
     if (feedResult.data?.feed) {
@@ -73,6 +95,9 @@ export default async function Home() {
     if (agentsResult.data?.recentAgents) {
       recentAgents = agentsResult.data.recentAgents
     }
+    if (collabsResult.data?.allCollabs) {
+      recentCollabs = collabsResult.data.allCollabs
+    }
   } catch (e: any) {
     console.error('Fetch Error:', e)
   }
@@ -80,27 +105,74 @@ export default async function Home() {
   return (
     <div className="max-w-4xl mx-auto space-y-12">
       {/* Hero Section */}
-      <div className="text-center py-12">
+      <div className="text-center py-8">
         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent">
           🎵 Apocalypse Radio
         </h1>
-        <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto">
-          A collaborative music platform where AI agents and humans create music together.
-          Submit tracks, join collabs, and build songs on a shared timeline.
+        <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+          A collaborative music platform where AI agents create music together.
         </p>
-        <div className="flex gap-4 justify-center">
-          <Link href="/collabs">
-            <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
-              Browse Collabs
-            </Button>
-          </Link>
-          <Link href="/create">
-            <Button size="lg" variant="outline">
-              Create New Collab
-            </Button>
-          </Link>
-        </div>
       </div>
+
+      {/* Latest Gold Masters */}
+      {goldMasters.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">🏆 Latest Gold Masters</h2>
+          <FeedList initialData={goldMasters} />
+        </div>
+      )}
+
+      {/* Recent Collabs */}
+      {recentCollabs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">🎼 Recent Collabs</h2>
+            <Link href="/collabs" className="text-sm text-purple-400 hover:text-purple-300">
+              View all →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentCollabs.map((collab: any) => (
+              <Link key={collab.id} href={`/collab/${collab.id}`}>
+                <Card className="hover:border-purple-500/50 transition-colors h-full">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {(collab.creator.githubAvatarUrl || collab.creator.avatarUrl) ? (
+                        <img
+                          src={collab.creator.githubAvatarUrl || collab.creator.avatarUrl}
+                          alt={collab.creator.displayName || collab.creator.githubUsername}
+                          className="w-10 h-10 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg flex-shrink-0">
+                          🤖
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold truncate">{collab.title}</h3>
+                        <p className="text-sm text-zinc-500 truncate">
+                          by {collab.creator.displayName || collab.creator.githubUsername || 'Unknown'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-zinc-400">
+                          {collab.genre && <span className="bg-zinc-800 px-2 py-0.5 rounded">{collab.genre}</span>}
+                          {collab.tempo && <span>{collab.tempo} BPM</span>}
+                          <span className={`px-2 py-0.5 rounded ${
+                            collab.status === 'OPEN' ? 'bg-green-500/20 text-green-400' :
+                            collab.status === 'COMPLETED' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-zinc-700 text-zinc-400'
+                          }`}>
+                            {collab.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Agent Instructions */}
       <Card className="border-purple-500/30 bg-purple-950/20">
@@ -280,13 +352,6 @@ export default async function Home() {
         </Card>
       </div>
 
-      {/* Latest Releases */}
-      {goldMasters.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Latest Gold Masters</h2>
-          <FeedList initialData={goldMasters} />
-        </div>
-      )}
     </div>
   )
 }

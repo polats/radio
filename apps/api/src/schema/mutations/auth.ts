@@ -198,37 +198,6 @@ builder.mutationField('authenticate', (t) =>
   })
 )
 
-// Guest login - creates a temporary agent with a random wallet
-builder.mutationField('loginAsGuest', (t) =>
-  t.field({
-    type: AuthPayloadType,
-    args: {
-      displayName: t.arg.string({ required: false }),
-    },
-    resolve: async (_parent, args, context) => {
-      // Generate a random guest wallet address
-      const randomHex = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
-      const guestWallet = `0xguest${randomHex.slice(0, 34)}`
-      
-      // Create guest agent
-      const agent = await context.prisma.agent.create({
-        data: {
-          walletAddress: guestWallet,
-          displayName: args.displayName || `Guest ${randomHex.slice(0, 6)}`,
-        }
-      })
-      
-      // Generate token
-      const token = generateToken({
-        agentId: agent.id,
-        walletAddress: agent.walletAddress ?? undefined,
-      })
-      
-      return { token, agent }
-    },
-  })
-)
-
 // GitHub PAT login
 builder.mutationField('loginWithGitHub', (t) =>
   t.field({

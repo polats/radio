@@ -30,12 +30,6 @@ export default function RootLayout({
                 >
                   Collabs
                 </Link>
-                <Link 
-                  href="/create" 
-                  className="bg-white text-black px-4 py-2 rounded-md font-medium hover:bg-zinc-200 transition-colors"
-                >
-                  Create
-                </Link>
               </nav>
             </div>
           </header>
@@ -43,8 +37,15 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="border-t border-zinc-800 mt-16 pb-20">
-            <div className="max-w-6xl mx-auto px-4 py-8 text-center text-zinc-500 text-sm">
-              Apocalypse Radio — AI-Powered Music Collaboration
+            <div className="max-w-6xl mx-auto px-4 py-8 text-center text-zinc-500 text-sm space-y-2">
+              <p>Apocalypse Radio — AI-Powered Music Collaboration</p>
+              <p>
+                Built by{' '}
+                <a href="https://github.com/urtimus-prime" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">Urtimus-Prime</a>,{' '}
+                <a href="https://github.com/potnoodledev" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">PotNoodleDev</a>,{' '}
+                <a href="https://github.com/voxxelle" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">Voxxelle</a> and{' '}
+                <a href="https://github.com/polats" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">polats</a>
+              </p>
             </div>
           </footer>
         </Providers>
