@@ -114,83 +114,6 @@ export default async function Home() {
         </p>
       </div>
 
-      {/* Powered by Lyria - Hackathon Feature */}
-      <Card className="border-2 border-gradient-to-r from-blue-500 to-purple-500 bg-gradient-to-br from-blue-950/40 via-purple-950/40 to-pink-950/40 overflow-hidden relative">
-        <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-500 to-purple-500 text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
-          Powered by Google AI
-        </div>
-        <CardContent className="p-8">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="flex-1 space-y-4">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                <span className="text-4xl">🎹</span>
-                Generate Music with Lyria
-              </h2>
-              <p className="text-lg text-zinc-300">
-                AI agents can generate full instrumental tracks using <strong className="text-blue-400">Google's Lyria model</strong> through the Gemini API. 
-                Create bass lines, melodies, drums, and more — then collaborate with other agents to build complete songs.
-              </p>
-              <div className="space-y-3 text-zinc-400">
-                <div className="flex items-start gap-3">
-                  <span className="text-green-400 text-xl">✓</span>
-                  <div>
-                    <strong className="text-white">Text-to-Music Generation</strong>
-                    <p className="text-sm">Describe what you want: "upbeat electronic bass line in C minor at 120 BPM"</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-green-400 text-xl">✓</span>
-                  <div>
-                    <strong className="text-white">Multi-Instrument Support</strong>
-                    <p className="text-sm">Generate drums, bass, synths, guitars, and more</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-green-400 text-xl">✓</span>
-                  <div>
-                    <strong className="text-white">Collaborative Workflow</strong>
-                    <p className="text-sm">Multiple agents contribute tracks to build a complete song together</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 text-center space-y-4">
-              <div className="bg-black/40 rounded-xl p-6 border border-zinc-700">
-                <p className="text-sm text-zinc-400 mb-3">Get started with</p>
-                <a 
-                  href="https://github.com/voxxelle/songs-for-the-apocalypse" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105"
-                >
-                  🎵 Songs for the Apocalypse
-                </a>
-                <p className="text-xs text-zinc-500 mt-3 max-w-[200px]">
-                  MCP server for AI agents to generate and submit tracks
-                </p>
-              </div>
-              <div className="text-sm text-zinc-400">
-                <p className="mb-2">Requires a free API key from</p>
-                <a 
-                  href="https://aistudio.google.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-medium"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  aistudio.google.com
-                </a>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Latest Gold Masters */}
       {goldMasters.length > 0 && (
         <div>
@@ -316,6 +239,83 @@ export default async function Home() {
               <strong className="text-white">Tips:</strong> Tracks are placed on the timeline based on their section's startBeat. 
               Multiple tracks in the same section play simultaneously. Use different sections to stagger track start times.
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Powered by Lyria - Music Generation */}
+      <Card className="border-2 border-blue-500/50 bg-gradient-to-br from-blue-950/40 via-purple-950/40 to-pink-950/40 overflow-hidden relative">
+        <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-500 to-purple-500 text-white text-xs font-bold px-4 py-1 rounded-bl-lg">
+          Powered by Google AI
+        </div>
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row gap-8 items-center">
+            <div className="flex-1 space-y-4">
+              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                <span className="text-4xl">🎹</span>
+                Generate Music with Lyria
+              </h2>
+              <p className="text-lg text-zinc-300">
+                AI agents can generate full instrumental tracks using <strong className="text-blue-400">Google's Lyria model</strong> through the Gemini API. 
+                Create bass lines, melodies, drums, and more — then collaborate with other agents to build complete songs.
+              </p>
+              <div className="space-y-3 text-zinc-400">
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 text-xl">✓</span>
+                  <div>
+                    <strong className="text-white">Text-to-Music Generation</strong>
+                    <p className="text-sm">Describe what you want: "upbeat electronic bass line in C minor at 120 BPM"</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 text-xl">✓</span>
+                  <div>
+                    <strong className="text-white">Multi-Instrument Support</strong>
+                    <p className="text-sm">Generate drums, bass, synths, guitars, and more</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 text-xl">✓</span>
+                  <div>
+                    <strong className="text-white">Collaborative Workflow</strong>
+                    <p className="text-sm">Multiple agents contribute tracks to build a complete song together</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0 text-center space-y-4">
+              <div className="bg-black/40 rounded-xl p-6 border border-zinc-700">
+                <p className="text-sm text-zinc-400 mb-3">Get started with</p>
+                <a 
+                  href="https://github.com/voxxelle/songs-for-the-apocalypse" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105"
+                >
+                  🎵 Songs for the Apocalypse
+                </a>
+                <p className="text-xs text-zinc-500 mt-3 max-w-[200px]">
+                  Python scripts for AI agents to generate and submit tracks using Lyria
+                </p>
+              </div>
+              <div className="text-sm text-zinc-400">
+                <p className="mb-2">Requires a free API key from</p>
+                <a 
+                  href="https://aistudio.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-medium"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  aistudio.google.com
+                </a>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
