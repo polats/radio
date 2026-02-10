@@ -69,6 +69,9 @@ importers:
       '@urql/core':
         specifier: ^5.1.1
         version: 5.2.0(graphql@16.12.0)
+      '@urql/exchange-graphcache':
+        specifier: ^9.0.0
+        version: 9.0.0(@urql/core@5.2.0(graphql@16.12.0))(graphql@16.12.0)
       '@urql/next':
         specifier: ^1.1.4
         version: 1.1.5(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@4.2.2(@urql/core@5.2.0(graphql@16.12.0))(react@19.2.4))
@@ -84,6 +87,9 @@ importers:
       graphql:
         specifier: ^16.10.0
         version: 16.12.0
+      graphql-ws:
+        specifier: ^6.0.7
+        version: 6.0.7(graphql@16.12.0)(ws@8.17.1)
       lucide-react:
         specifier: ^0.506.0
         version: 0.506.0(react@19.2.4)
@@ -1123,6 +1129,11 @@ packages:
   '@urql/core@5.2.0':
     resolution: {integrity: sha512-/n0ieD0mvvDnVAXEQgX/7qJiVcvYvNkOHeBvkwtylfjydar123caCXcl58PXFY11oU1oquJocVXHxLAbtv4x1A==}
 
+  '@urql/exchange-graphcache@9.0.0':
+    resolution: {integrity: sha512-5ACktvMFdnD5JC6DaSUrlj345c1JIUi7PwgvmnkwVOWsCRt/Vo9946UaG+sg69ku8seESMBK4xkeI41M39Dd5A==}
+    peerDependencies:
+      '@urql/core': ^6.0.0
+
   '@urql/next@1.1.5':
     resolution: {integrity: sha512-xCNzgf6IarQ99FN4IPvj5nwkeX1z/mpO9+R54StZOK445lXlYbQnI8s4b9tNqTHbB09gt/vKE3ByRh2NLFMyfw==}
     peerDependencies:
@@ -1419,6 +1430,22 @@ packages:
   glob-parent@6.0.2:
     resolution: {integrity: sha512-XxwI8EOhVQgWp6iDL+3b0r86f4d6AX6zSU55HfB4ydCEuXLXc5FcYeOu+nnGftS4TEju/11rt4KJPTMgbfmv4A==}
     engines: {node: '>=10.13.0'}
+
+  graphql-ws@6.0.7:
+    resolution: {integrity: sha512-yoLRW+KRlDmnnROdAu7sX77VNLC0bsFoZyGQJLy1cF+X/SkLg/fWkRGrEEYQK8o2cafJ2wmEaMqMEZB3U3DYDg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@fastify/websocket': ^10 || ^11
+      crossws: ~0.3
+      graphql: ^15.10.1 || ^16
+      ws: ^8
+    peerDependenciesMeta:
+      '@fastify/websocket':
+        optional: true
+      crossws:
+        optional: true
+      ws:
+        optional: true
 
   graphql-yoga@5.18.0:
     resolution: {integrity: sha512-xFt1DVXS1BZ3AvjnawAGc5OYieSe56WuQuyk3iEpBwJ3QDZJWQGLmU9z/L5NUZ+pUcyprsz/bOwkYIV96fXt/g==}
@@ -3415,6 +3442,14 @@ snapshots:
     transitivePeerDependencies:
       - graphql
 
+  '@urql/exchange-graphcache@9.0.0(@urql/core@5.2.0(graphql@16.12.0))(graphql@16.12.0)':
+    dependencies:
+      '@0no-co/graphql.web': 1.2.0(graphql@16.12.0)
+      '@urql/core': 5.2.0(graphql@16.12.0)
+      wonka: 6.3.5
+    transitivePeerDependencies:
+      - graphql
+
   '@urql/next@1.1.5(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@4.2.2(@urql/core@5.2.0(graphql@16.12.0))(react@19.2.4))':
     dependencies:
       next: 15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -3723,6 +3758,12 @@ snapshots:
   glob-parent@6.0.2:
     dependencies:
       is-glob: 4.0.3
+
+  graphql-ws@6.0.7(graphql@16.12.0)(ws@8.17.1):
+    dependencies:
+      graphql: 16.12.0
+    optionalDependencies:
+      ws: 8.17.1
 
   graphql-yoga@5.18.0(graphql@16.12.0):
     dependencies:

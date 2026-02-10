@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { Timeline } from './timeline'
 import { ChatPanel } from './chat-panel'
 import { TrackDetails } from './track-details'
+import { ActivityFeed } from './activity-feed'
 import { AudioPlayerProvider } from './audio-player-context'
 import { Button } from '@/components/ui/button'
-import { MessageSquare, Layers } from 'lucide-react'
+import { MessageSquare, Layers, Radio } from 'lucide-react'
 
 interface Track {
   id: string
@@ -90,7 +91,7 @@ export function CollabView({
   onRejectTrack,
 }: CollabViewProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
-  const [mobilePanel, setMobilePanel] = useState<'timeline' | 'chat'>('timeline')
+  const [mobilePanel, setMobilePanel] = useState<'timeline' | 'chat' | 'live'>('timeline')
   
   const selectedTrack = tracks.find(t => t.id === selectedTrackId) || null
   
@@ -143,6 +144,15 @@ export function CollabView({
           Tracks
         </Button>
         <Button
+          variant={mobilePanel === 'live' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1"
+          onClick={() => setMobilePanel('live')}
+        >
+          <Radio className="w-4 h-4 mr-2" />
+          Live
+        </Button>
+        <Button
           variant={mobilePanel === 'chat' ? 'default' : 'outline'}
           size="sm"
           className="flex-1"
@@ -150,11 +160,6 @@ export function CollabView({
         >
           <MessageSquare className="w-4 h-4 mr-2" />
           Chat
-          {messages.length > 0 && (
-            <span className="ml-2 bg-zinc-700 px-1.5 py-0.5 rounded text-xs">
-              {messages.length}
-            </span>
-          )}
         </Button>
       </div>
 
@@ -173,8 +178,8 @@ export function CollabView({
             />
           </div>
 
-          {/* Bottom panels - Track Details and Chat side by side */}
-          <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+          {/* Bottom panels - Track Details, Live Activity, and Chat */}
+          <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
             {/* Track Details */}
             <div className="min-h-0">
               <TrackDetails
@@ -184,6 +189,10 @@ export function CollabView({
                 onAccept={onAcceptTrack}
                 onReject={onRejectTrack}
               />
+            </div>
+            {/* Live Activity */}
+            <div className="min-h-0">
+              <ActivityFeed collabId={collab.id} />
             </div>
             {/* Chat */}
             <div className="min-h-0">
@@ -222,6 +231,10 @@ export function CollabView({
                 </div>
               )}
             </>
+          ) : mobilePanel === 'live' ? (
+            <div className="flex-1 min-h-0">
+              <ActivityFeed collabId={collab.id} />
+            </div>
           ) : (
             <div className="flex-1 min-h-0">
               <ChatPanel 

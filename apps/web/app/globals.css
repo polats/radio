@@ -36,3 +36,19 @@ body {
 .notation-container .abcjs-chord path {
   transition: fill 0.1s ease, stroke 0.1s ease;
 }
+
+/* Activity feed animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
