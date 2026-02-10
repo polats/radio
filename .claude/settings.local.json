@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:apocalypseradio.xyz)",
+      "WebFetch(domain:api.apocalypseradio.xyz)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(echo:*)",
+      "Bash(cygpath:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }
