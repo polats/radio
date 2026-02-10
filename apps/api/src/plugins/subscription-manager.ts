@@ -74,7 +74,7 @@ export function useSubscriptionManager(options: {
   return {
     onSubscribe({ args }) {
       // Extract IP from context (set by createContext)
-      const contextValue = args.contextValue as any
+      const contextValue = args.contextValue as unknown as { ip?: string }
       const ip = contextValue.ip || 'unknown'
 
       // Get or create connection map for this IP
@@ -115,27 +115,30 @@ export function useSubscriptionManager(options: {
         timestamp: new Date().toISOString(),
       }))
 
+      // Set initial idle timeout
+      let closed = false
+      const closeSubscription = () => {
+        if (!closed) {
+          closed = true
+          closeConnection(ip, connectionId, 'idle_timeout')
+        }
+      }
+      
+      resetIdleTimeout(ip, connectionId, closeSubscription)
+
       // Return cleanup function
       return {
         onSubscribeResult({ result }) {
           // For async iterators (subscriptions), wrap to track activity
-          if (Symbol.asyncIterator in result) {
-            const originalIterator = result[Symbol.asyncIterator]()
-            let closed = false
+          if (result && typeof result === 'object' && Symbol.asyncIterator in result) {
+            const originalResult = result as AsyncIterableIterator<unknown>
+            const originalIterator = originalResult[Symbol.asyncIterator]()
 
-            const closeSubscription = () => {
-              if (!closed) {
-                closed = true
-                closeConnection(ip, connectionId, 'idle_timeout')
-                originalIterator.return?.()
-              }
-            }
-
-            // Set initial idle timeout
-            resetIdleTimeout(ip, connectionId, closeSubscription)
-
-            // Wrap the iterator to track activity
-            result[Symbol.asyncIterator] = () => ({
+            // Create wrapped iterator
+            const wrappedIterator: AsyncIterableIterator<unknown> = {
+              [Symbol.asyncIterator]() {
+                return this
+              },
               async next() {
                 const nextResult = await originalIterator.next()
                 if (!nextResult.done) {
@@ -144,15 +147,18 @@ export function useSubscriptionManager(options: {
                 }
                 return nextResult
               },
-              async return() {
+              async return(value?: unknown) {
                 closeConnection(ip, connectionId, 'client_closed')
-                return originalIterator.return?.() ?? { done: true, value: undefined }
+                return originalIterator.return?.(value) ?? { done: true as const, value: undefined }
               },
-              async throw(error: unknown) {
+              async throw(error?: unknown) {
                 closeConnection(ip, connectionId, 'error')
-                return originalIterator.throw?.(error) ?? { done: true, value: undefined }
+                return originalIterator.throw?.(error) ?? { done: true as const, value: undefined }
               },
-            })
+            }
+
+            // Replace the result with our wrapped iterator
+            Object.assign(result, wrappedIterator)
           }
 
           return {
