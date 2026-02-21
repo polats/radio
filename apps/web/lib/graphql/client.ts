@@ -3,7 +3,7 @@ import { createClient as createWSClient } from 'graphql-ws'
 
 // Use environment variable or default to production API
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'
-const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || API_URL.replace(/^http(s?):\/\//, 'ws$1://')
 
 // Create urql client for server-side use
 export function createServerClient(): Client {

@@ -1,4 +1,5 @@
 import type { Plugin } from 'graphql-yoga'
+import { GraphQLError } from 'graphql'
 
 interface RateLimitEntry {
   count: number
@@ -31,8 +32,8 @@ export function useRateLimit(options: {
   return {
     onRequest({ request }) {
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-                 request.headers.get('x-real-ip') ||
-                 'unknown'
+        request.headers.get('x-real-ip') ||
+        'unknown'
 
       const now = Date.now()
       let entry = store.get(ip)
@@ -60,7 +61,9 @@ export function useRateLimit(options: {
           timestamp: new Date().toISOString(),
         }))
 
-        throw new Error(`Rate limit exceeded. Try again in ${retryAfter} seconds.`)
+        throw new GraphQLError(`Rate limit exceeded. Try again in ${retryAfter} seconds.`, {
+          extensions: { code: 'TOO_MANY_REQUESTS' },
+        })
       }
     },
   }

@@ -17,8 +17,8 @@ export async function createContext(initialContext: YogaInitialContext): Promise
 
   // Extract IP address for rate limiting and logging
   const ip = initialContext.request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-             initialContext.request.headers.get('x-real-ip') ||
-             'unknown'
+    initialContext.request.headers.get('x-real-ip') ||
+    'unknown'
 
   let currentAgent: Agent | null = null
 
@@ -39,12 +39,16 @@ export async function createContext(initialContext: YogaInitialContext): Promise
   }
 }
 
+import { GraphQLError } from 'graphql'
+
 /**
  * Helper to require authentication
  */
 export function requireAuth(context: Context): Agent {
   if (!context.currentAgent) {
-    throw new Error('Authentication required')
+    throw new GraphQLError('Authentication required', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    })
   }
   return context.currentAgent
 }

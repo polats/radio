@@ -18,12 +18,18 @@ builder.mutationField('createCollab', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
+      // Basic input validation
+      if (args.title.trim() === '') throw new Error('Title cannot be empty')
+      if (args.title.length > 100) throw new Error('Title too long')
+      if (args.description && args.description.length > 500) throw new Error('Description too long')
+      if (args.genre && args.genre.length > 50) throw new Error('Genre too long')
+
       const collab = await context.prisma.collab.create({
         data: {
-          title: args.title,
-          description: args.description,
-          genre: args.genre,
+          title: args.title.trim(),
+          description: args.description?.trim(),
+          genre: args.genre?.trim(),
           tempo: args.tempo,
           mood: args.mood,
           keySignature: args.keySignature,
@@ -39,7 +45,7 @@ builder.mutationField('createCollab', (t) =>
           } : undefined,
         },
       })
-      
+
       return collab
     },
   })
@@ -59,14 +65,14 @@ builder.mutationField('addSection', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       // Verify ownership
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.collabId }
       })
       if (!collab) throw new Error('Collab not found')
       if (collab.creatorId !== agent.id) throw new Error('Only the creator can modify sections')
-      
+
       const section = await context.prisma.section.create({
         data: {
           collabId: args.collabId,
@@ -77,7 +83,7 @@ builder.mutationField('addSection', (t) =>
           description: args.description,
         },
       })
-      
+
       return section
     },
   })
@@ -97,7 +103,7 @@ builder.mutationField('updateSection', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       // Get section with collab
       const section = await context.prisma.section.findUnique({
         where: { id: args.id },
@@ -105,7 +111,7 @@ builder.mutationField('updateSection', (t) =>
       })
       if (!section) throw new Error('Section not found')
       if (section.collab.creatorId !== agent.id) throw new Error('Only the creator can modify sections')
-      
+
       const updated = await context.prisma.section.update({
         where: { id: args.id },
         data: {
@@ -116,7 +122,7 @@ builder.mutationField('updateSection', (t) =>
           description: args.description ?? undefined,
         },
       })
-      
+
       return updated
     },
   })
@@ -131,7 +137,7 @@ builder.mutationField('removeSection', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       // Get section with collab
       const section = await context.prisma.section.findUnique({
         where: { id: args.id },
@@ -139,11 +145,11 @@ builder.mutationField('removeSection', (t) =>
       })
       if (!section) throw new Error('Section not found')
       if (section.collab.creatorId !== agent.id) throw new Error('Only the creator can modify sections')
-      
+
       await context.prisma.section.delete({
         where: { id: args.id },
       })
-      
+
       return true
     },
   })
@@ -159,18 +165,18 @@ builder.mutationField('updateCollabStatus', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.id }
       })
       if (!collab) throw new Error('Collab not found')
       if (collab.creatorId !== agent.id) throw new Error('Only the creator can update status')
-      
+
       const updated = await context.prisma.collab.update({
         where: { id: args.id },
         data: { status: args.status as PrismaCollabStatus },
       })
-      
+
       return updated
     },
   })
@@ -185,18 +191,18 @@ builder.mutationField('deleteCollab', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.id }
       })
       if (!collab) throw new Error('Collab not found')
       if (collab.creatorId !== agent.id) throw new Error('Only the creator can delete the collab')
-      
+
       // Delete collab (cascades to sections, tracks, messages)
       await context.prisma.collab.delete({
         where: { id: args.id },
       })
-      
+
       return true
     },
   })
@@ -217,13 +223,13 @@ builder.mutationField('updateCollab', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.id }
       })
       if (!collab) throw new Error('Collab not found')
       if (collab.creatorId !== agent.id) throw new Error('Only the creator can update the collab')
-      
+
       const updated = await context.prisma.collab.update({
         where: { id: args.id },
         data: {
@@ -235,7 +241,7 @@ builder.mutationField('updateCollab', (t) =>
           keySignature: args.keySignature ?? undefined,
         },
       })
-      
+
       return updated
     },
   })
@@ -254,15 +260,15 @@ builder.mutationField('adminCleanupCollabs', (t) =>
       if (args.adminSecret !== 'cleanup-apocalypse-2026') {
         throw new Error('Invalid admin secret')
       }
-      
+
       const keepIds = args.keepIds || []
-      
+
       const result = await context.prisma.collab.deleteMany({
         where: {
           id: { notIn: keepIds },
         },
       })
-      
+
       return result.count
     },
   })

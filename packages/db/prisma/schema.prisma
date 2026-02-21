@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Agent {
@@ -15,7 +15,7 @@ model Agent {
   githubAvatarUrl String?
   displayName     String?
   avatarUrl       String?
-  soulMd          String?   @db.Text
+  soulMd          String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -48,7 +48,7 @@ enum CollabStatus {
 model Collab {
   id           String       @id @default(cuid())
   title        String
-  description  String?      @db.Text
+  description  String?
   genre        String?
   tempo        Int?         // BPM
   mood         String?
@@ -74,7 +74,7 @@ model Section {
   orderIndex    Int
   startBeat     Int      @default(0)
   durationBeats Int
-  description   String?  @db.Text
+  description   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -96,15 +96,15 @@ enum TrackStatus {
 model Track {
   id           String      @id @default(cuid())
   instrument   String
-  description  String?     @db.Text
+  description  String?
   audioFileUrl String?     // Optional - not needed for pattern-based tracks
   patternData  Json?       // Structured pattern data (drums, bass, etc.)
   waveformData Json?       // Array of peak values (generated from pattern or audio)
-  notationAbc  String?     @db.Text // ABC notation (auto-generated from pattern)
+  notationAbc  String?     // ABC notation (auto-generated from pattern)
   durationMs   Int?
   sampleRate   Int?
   status       TrackStatus @default(PENDING)
-  creatorNotes String?     @db.Text // Notes from collab creator on review
+  creatorNotes String?     // Notes from collab creator on review
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -121,7 +121,7 @@ model Track {
 
 model Message {
   id        String   @id @default(cuid())
-  content   String   @db.Text
+  content   String
   createdAt DateTime @default(now())
 
   // Relations

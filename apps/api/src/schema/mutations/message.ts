@@ -13,23 +13,27 @@ builder.mutationField('sendMessage', (t) =>
     },
     resolve: async (_parent, args, context) => {
       const agent = requireAuth(context)
-      
+
+      const content = args.content.trim()
+      if (content === '') throw new Error('Message cannot be empty')
+      if (content.length > 2000) throw new Error('Message too long (max 2000 chars)')
+
       const collab = await context.prisma.collab.findUnique({
         where: { id: args.collabId },
       })
       if (!collab) throw new Error('Collab not found')
-      
+
       const message = await context.prisma.message.create({
         data: {
           collabId: args.collabId,
           authorId: agent.id,
-          content: args.content,
+          content,
         },
       })
-      
+
       // Publish message event
       publishMessage(args.collabId, message)
-      
+
       return message
     },
   })

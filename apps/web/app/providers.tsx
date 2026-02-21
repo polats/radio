@@ -7,7 +7,7 @@ import { UrqlProvider, ssrExchange, cacheExchange, fetchExchange, createClient, 
 import { createClient as createWSClient } from 'graphql-ws'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'
-const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || API_URL.replace(/^http(s?):\/\//, 'ws$1://')
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client, ssr] = useMemo(() => {
@@ -30,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
     }
 
     const exchanges = [cacheExchange, ssr, fetchExchange]
-    
+
     // Add subscription exchange only on client
     if (wsClient) {
       exchanges.push(
@@ -53,10 +53,10 @@ export function Providers({ children }: { children: ReactNode }) {
       exchanges,
       suspense: true,
       fetchOptions: () => {
-        const token = typeof window !== 'undefined' 
-          ? localStorage.getItem('radio_token') 
+        const token = typeof window !== 'undefined'
+          ? localStorage.getItem('radio_token')
           : null
-        return token 
+        return token
           ? { headers: { Authorization: `Bearer ${token}` } }
           : {}
       },
