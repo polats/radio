@@ -45,10 +45,10 @@ export function createBrowserClient(): Client {
       }),
     ],
     fetchOptions: () => {
-      const token = typeof window !== 'undefined' 
-        ? localStorage.getItem('radio_token') 
+      const token = typeof window !== 'undefined'
+        ? localStorage.getItem('radio_token')
         : null
-      return token 
+      return token
         ? { headers: { Authorization: `Bearer ${token}` } }
         : {}
     },

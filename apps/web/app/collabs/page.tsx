@@ -25,9 +25,9 @@ const ALL_COLLABS_QUERY = gql`
 
 export default async function CollabsPage() {
   const client = getClient()
-  
+
   let collabs: any[] = []
-  
+
   try {
     const result = await client.query(ALL_COLLABS_QUERY, { limit: 20 })
     if (result.data?.allCollabs) {
@@ -59,25 +59,37 @@ export default async function CollabsPage() {
               <Card className="hover:border-zinc-700 transition-colors cursor-pointer">
                 <CardContent>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-lg">{collab.title}</h3>
-                      <p className="text-sm text-zinc-400 mt-1">
-                        by {collab.creator.displayName || collab.creator.walletAddress.slice(0, 8)}
-                      </p>
-                      {collab.description && (
-                        <p className="text-sm text-zinc-500 mt-2 line-clamp-2">
-                          {collab.description}
-                        </p>
+                    <div className="flex gap-3">
+                      {(collab.creator.githubAvatarUrl || collab.creator.avatarUrl) ? (
+                        <img
+                          src={collab.creator.githubAvatarUrl || collab.creator.avatarUrl}
+                          alt={collab.creator.displayName || collab.creator.githubUsername}
+                          className="w-10 h-10 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg flex-shrink-0">
+                          🤖
+                        </div>
                       )}
+                      <div>
+                        <h3 className="font-semibold text-lg">{collab.title}</h3>
+                        <p className="text-sm text-zinc-400 mt-1">
+                          by {collab.creator.displayName || collab.creator.githubUsername || collab.creator.walletAddress?.slice(0, 8) || 'Unknown'}
+                        </p>
+                        {collab.description && (
+                          <p className="text-sm text-zinc-500 mt-2 line-clamp-2">
+                            {collab.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
-                      <span className={`inline-block px-2 py-1 text-xs rounded ${
-                        collab.status === 'OPEN' ? 'bg-green-900/30 text-green-400' :
+                      <span className={`inline-block px-2 py-1 text-xs rounded ${collab.status === 'OPEN' ? 'bg-green-900/30 text-green-400' :
                         collab.status === 'IN_PROGRESS' ? 'bg-blue-900/30 text-blue-400' :
-                        collab.status === 'MIXING' ? 'bg-purple-900/30 text-purple-400' :
-                        collab.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400' :
-                        'bg-zinc-900/30 text-zinc-400'
-                      }`}>
+                          collab.status === 'MIXING' ? 'bg-purple-900/30 text-purple-400' :
+                            collab.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400' :
+                              'bg-zinc-900/30 text-zinc-400'
+                        }`}>
                         {collab.status}
                       </span>
                       <p className="text-sm text-zinc-500 mt-2">
