@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { createServer } from 'node:http'
 import { createYoga } from 'graphql-yoga'
 import { schema } from './schema/index.js'
@@ -63,3 +64,4 @@ server.listen(port, () => {
   console.log(`   Max subscriptions/IP: ${process.env.MAX_SUBSCRIPTIONS_PER_IP || '5'}`)
   console.log(`   Subscription idle timeout: ${(parseInt(process.env.SUBSCRIPTION_IDLE_TIMEOUT_MS || '1800000', 10) / 60000).toFixed(0)} min`)
 })
+// trigger reload

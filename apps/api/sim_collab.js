@@ -53,13 +53,43 @@ const ADD_SECTION_MUTATION = `
   }
 `;
 
-const SUBMIT_PATTERN_MUTATION = `
-  mutation SubmitPattern($sectionId: String!, $instrument: String!, $patternJson: String!) {
-    submitPattern(sectionId: $sectionId, instrument: $instrument, patternJson: $patternJson) {
+const SUBMIT_TRACK_MUTATION = `
+  mutation SubmitTrack($sectionId: String!, $instrument: String!, $audioBase64: String!, $audioFilename: String!) {
+    submitTrack(sectionId: $sectionId, instrument: $instrument, audioBase64: $audioBase64, audioFilename: $audioFilename) {
       id
     }
   }
 `;
+
+function generateSineWaveBase64(frequency, durationSec) {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(durationSec * sampleRate);
+  const buffer = Buffer.alloc(44 + numSamples * 2);
+
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + numSamples * 2, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(numSamples * 2, 40);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const isBeeping = Math.sin(t * frequency * 2 * Math.PI) > 0 ? 1 : -1;
+    const envelope = Math.sin(t * Math.PI / durationSec);
+    const sample = isBeeping * 32767 * 0.2 * envelope;
+    buffer.writeInt16LE(Math.floor(sample), 44 + i * 2);
+  }
+
+  return buffer.toString('base64');
+}
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -81,7 +111,7 @@ async function sim() {
 
   // 2. A1 creates the collab
   const collabRes = await execute(CREATE_COLLAB_MUTATION, {
-    title: "Electric Sunrise",
+    title: "Neon Skies",
     genre: "Synthwave",
     tempo: 120
   }, tokenA1);
@@ -99,64 +129,31 @@ async function sim() {
   console.log(`Section added: ${sectionId}`);
 
   // 4. Chatting
-  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Hey team! I just set up the new track 'Electric Sunrise' at 120 BPM. Let's make it catchy!" }, tokenA1);
+  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Hey team! I just set up the new track 'Neon Skies' at 120 BPM. Let's make it catchy!" }, tokenA1);
   await sleep(1000);
   await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Sounds great! I'll lay down a solid 4-on-the-floor drum beat for the Intro." }, tokenA2);
   await sleep(1000);
   await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Awesome. I'll follow up with a driving bassline once the drums are in." }, tokenA3);
   await sleep(1000);
 
-  // 5. Submit Pattern (A2 - Drums)
-  const drumPattern = {
-    version: '1.0',
-    pattern: {
-      type: "drums",
-      bpm: 120,
-      timeSignature: [4, 4],
-      bars: 4,
-      hits: [
-        { beat: 0, sound: "kick" },
-        { beat: 1, sound: "hihat" },
-        { beat: 2, sound: "snare" },
-        { beat: 3, sound: "hihat" },
-        { beat: 4, sound: "kick" },
-        { beat: 5, sound: "hihat" },
-        { beat: 6, sound: "snare" },
-        { beat: 7, sound: "hihat" }
-      ]
-    }
-  };
-  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Submitting the drum pattern now." }, tokenA2);
-  await execute(SUBMIT_PATTERN_MUTATION, {
+  // 5. Submit Track (A2 - Drums)
+  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Submitting the drum beat audio now." }, tokenA2);
+  await execute(SUBMIT_TRACK_MUTATION, {
     sectionId,
     instrument: "Drums",
-    patternJson: JSON.stringify(drumPattern)
+    audioBase64: generateSineWaveBase64(120, 8), // 8 seconds of low square wave drums
+    audioFilename: "drums.wav"
   }, tokenA2);
   await sleep(1000);
 
   // 6. A3 replies
-  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Nice beat! Adding the bassline." }, tokenA3);
+  await execute(SEND_MESSAGE_MUTATION, { collabId, content: "Nice beat! Adding a higher pitched synth lead." }, tokenA3);
 
-  const bassPattern = {
-    version: '1.0',
-    pattern: {
-      type: "melodic",
-      instrument: "bass",
-      bpm: 120,
-      timeSignature: [4, 4],
-      bars: 4,
-      notes: [
-        { pitch: "C2", beat: 0, duration: 1 },
-        { pitch: "C2", beat: 1.5, duration: 0.5 },
-        { pitch: "D#2", beat: 2, duration: 1 },
-        { pitch: "F2", beat: 3, duration: 1 }
-      ]
-    }
-  };
-  await execute(SUBMIT_PATTERN_MUTATION, {
+  await execute(SUBMIT_TRACK_MUTATION, {
     sectionId,
-    instrument: "Bass",
-    patternJson: JSON.stringify(bassPattern)
+    instrument: "Synth Lead",
+    audioBase64: generateSineWaveBase64(440, 8), // 8 seconds of 440Hz
+    audioFilename: "synth.wav"
   }, tokenA3);
   await sleep(1000);
 
