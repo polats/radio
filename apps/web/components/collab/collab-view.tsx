@@ -91,10 +91,19 @@ export function CollabView({
   onRejectTrack,
 }: CollabViewProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
-  const [mobilePanel, setMobilePanel] = useState<'timeline' | 'chat' | 'live'>('timeline')
-  
+  const [mobilePanel, setMobilePanel] = useState<'chat' | 'live' | 'details'>('chat')
+
+  const handleSelectTrack = (trackId: string | null) => {
+    setSelectedTrackId(trackId)
+    if (trackId) {
+      setMobilePanel('details')
+    } else if (mobilePanel === 'details') {
+      setMobilePanel('chat')
+    }
+  }
+
   const selectedTrack = tracks.find(t => t.id === selectedTrackId) || null
-  
+
   // Calculate total duration from tracks and sections
   const maxTrackEnd = Math.max(...tracks.map(t => t.startTimeMs + t.durationMs), 0)
   const maxSectionEnd = Math.max(...sections.map(s => s.endTimeMs), 0)
@@ -104,148 +113,145 @@ export function CollabView({
 
   return (
     <AudioPlayerProvider>
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold truncate">{collab.title}</h1>
-          <p className="text-sm text-zinc-400 mt-1 truncate">
-            by {collab.creator.displayName || collab.creator.walletAddress.slice(0, 8)}
-            {collab.genre && <span className="mx-2 hidden sm:inline">•</span>}
-            {collab.genre && <span className="hidden sm:inline">{collab.genre}</span>}
-            {collab.tempo && <span className="mx-2 hidden sm:inline">•</span>}
-            {collab.tempo && <span className="hidden sm:inline">{collab.tempo} BPM</span>}
-          </p>
-          {/* Mobile meta */}
-          <div className="flex gap-2 mt-1 sm:hidden text-xs text-zinc-500">
-            {collab.genre && <span>{collab.genre}</span>}
-            {collab.tempo && <span>{collab.tempo} BPM</span>}
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{collab.title}</h1>
+            <p className="text-sm text-zinc-400 mt-1 truncate">
+              by {collab.creator.displayName || collab.creator.walletAddress.slice(0, 8)}
+              {collab.genre && <span className="mx-2 hidden sm:inline">•</span>}
+              {collab.genre && <span className="hidden sm:inline">{collab.genre}</span>}
+              {collab.tempo && <span className="mx-2 hidden sm:inline">•</span>}
+              {collab.tempo && <span className="hidden sm:inline">{collab.tempo} BPM</span>}
+            </p>
+            {/* Mobile meta */}
+            <div className="flex gap-2 mt-1 sm:hidden text-xs text-zinc-500">
+              {collab.genre && <span>{collab.genre}</span>}
+              {collab.tempo && <span>{collab.tempo} BPM</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full border ${statusColors[collab.status]}`}>
+              {collab.status}
+            </span>
+            {isCreator && collab.status !== 'COMPLETED' && (
+              <Button size="sm" className="hidden sm:flex">Finalize</Button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full border ${statusColors[collab.status]}`}>
-            {collab.status}
-          </span>
-          {isCreator && collab.status !== 'COMPLETED' && (
-            <Button size="sm" className="hidden sm:flex">Finalize</Button>
-          )}
-        </div>
-      </div>
 
-      {/* Mobile panel toggle */}
-      <div className="flex gap-2 mb-3 lg:hidden">
-        <Button
-          variant={mobilePanel === 'timeline' ? 'default' : 'outline'}
-          size="sm"
-          className="flex-1"
-          onClick={() => setMobilePanel('timeline')}
-        >
-          <Layers className="w-4 h-4 mr-2" />
-          Tracks
-        </Button>
-        <Button
-          variant={mobilePanel === 'live' ? 'default' : 'outline'}
-          size="sm"
-          className="flex-1"
-          onClick={() => setMobilePanel('live')}
-        >
-          <Radio className="w-4 h-4 mr-2" />
-          Live
-        </Button>
-        <Button
-          variant={mobilePanel === 'chat' ? 'default' : 'outline'}
-          size="sm"
-          className="flex-1"
-          onClick={() => setMobilePanel('chat')}
-        >
-          <MessageSquare className="w-4 h-4 mr-2" />
-          Chat
-        </Button>
-      </div>
+        {/* Mobile panels moved below timeline */}
 
-      {/* Main content - responsive layout */}
-      <div className="flex-1 min-h-0 flex flex-col">
-        {/* Desktop: Timeline on top, panels below */}
-        <div className="hidden lg:flex lg:flex-col gap-4 h-full">
-          {/* Timeline - full width, fixed height */}
-          <div className="h-[45%] min-h-[250px] flex-shrink-0">
-            <Timeline
-              tracks={tracks}
-              sections={sections}
-              durationMs={durationMs}
-              selectedTrackId={selectedTrackId}
-              onSelectTrack={setSelectedTrackId}
-            />
-          </div>
-
-          {/* Bottom panels - Track Details, Live Activity, and Chat */}
-          <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
-            {/* Track Details */}
-            <div className="min-h-0">
-              <TrackDetails
-                track={selectedTrack}
-                isCreator={isCreator}
-                tempo={collab.tempo || 120}
-                onAccept={onAcceptTrack}
-                onReject={onRejectTrack}
+        {/* Main content - responsive layout */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Desktop: Timeline on top, panels below */}
+          <div className="hidden lg:flex lg:flex-col gap-4 h-full">
+            {/* Timeline - full width, fixed height */}
+            <div className="h-[45%] min-h-[250px] flex-shrink-0">
+              <Timeline
+                tracks={tracks}
+                sections={sections}
+                durationMs={durationMs}
+                selectedTrackId={selectedTrackId}
+                onSelectTrack={handleSelectTrack}
               />
             </div>
-            {/* Live Activity */}
-            <div className="min-h-0">
-              <ActivityFeed collabId={collab.id} />
-            </div>
-            {/* Chat */}
-            <div className="min-h-0">
-              <ChatPanel 
-                messages={messages} 
-                onSendMessage={onSendMessage}
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Mobile/Tablet: tabbed panels */}
-        <div className="lg:hidden h-full flex flex-col">
-          {mobilePanel === 'timeline' ? (
-            <>
-              {/* Timeline - smaller when track selected */}
-              <div className={`min-h-0 overflow-hidden ${selectedTrack ? 'h-1/2' : 'flex-1'}`}>
-                <Timeline
-                  tracks={tracks}
-                  sections={sections}
-                  durationMs={durationMs}
-                  selectedTrackId={selectedTrackId}
-                  onSelectTrack={setSelectedTrackId}
+            {/* Bottom panels - Track Details, Live Activity, and Chat */}
+            <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
+              {/* Track Details */}
+              <div className="min-h-0">
+                <TrackDetails
+                  track={selectedTrack}
+                  isCreator={isCreator}
+                  tempo={collab.tempo || 120}
+                  onAccept={onAcceptTrack}
+                  onReject={onRejectTrack}
                 />
               </div>
-              {/* Track Details - takes remaining space */}
-              {selectedTrack && (
-                <div className="flex-1 mt-3 min-h-0">
-                  <TrackDetails
-                    track={selectedTrack}
-                    isCreator={isCreator}
-                    tempo={collab.tempo || 120}
-                    onAccept={onAcceptTrack}
-                    onReject={onRejectTrack}
-                  />
-                </div>
-              )}
-            </>
-          ) : mobilePanel === 'live' ? (
-            <div className="flex-1 min-h-0">
-              <ActivityFeed collabId={collab.id} />
+              {/* Live Activity */}
+              <div className="min-h-0">
+                <ActivityFeed collabId={collab.id} />
+              </div>
+              {/* Chat */}
+              <div className="min-h-0">
+                <ChatPanel
+                  messages={messages}
+                  onSendMessage={onSendMessage}
+                />
+              </div>
             </div>
-          ) : (
-            <div className="flex-1 min-h-0">
-              <ChatPanel 
-                messages={messages} 
-                onSendMessage={onSendMessage}
+          </div>
+
+          {/* Mobile/Tablet: split view */}
+          <div className="lg:hidden h-full flex flex-col pt-2">
+            {/* Timeline - always on top, fixed height */}
+            <div className="h-[250px] min-h-[200px] flex-shrink-0">
+              <Timeline
+                tracks={tracks}
+                sections={sections}
+                durationMs={durationMs}
+                selectedTrackId={selectedTrackId}
+                onSelectTrack={handleSelectTrack}
               />
             </div>
-          )}
+
+            {/* Mobile panel toggle */}
+            <div className="flex gap-2 my-3">
+              <Button
+                variant={mobilePanel === 'chat' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1"
+                onClick={() => setMobilePanel('chat')}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Chat
+              </Button>
+              <Button
+                variant={mobilePanel === 'live' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1"
+                onClick={() => setMobilePanel('live')}
+              >
+                <Radio className="w-4 h-4 mr-2" />
+                Live
+              </Button>
+              {selectedTrack && (
+                <Button
+                  variant={mobilePanel === 'details' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setMobilePanel('details')}
+                >
+                  <Layers className="w-4 h-4 mr-2" />
+                  Details
+                </Button>
+              )}
+            </div>
+
+            {/* Bottom panel content */}
+            <div className="flex-1 min-h-0">
+              {mobilePanel === 'details' && selectedTrack ? (
+                <TrackDetails
+                  track={selectedTrack}
+                  isCreator={isCreator}
+                  tempo={collab.tempo || 120}
+                  onAccept={onAcceptTrack}
+                  onReject={onRejectTrack}
+                />
+              ) : mobilePanel === 'live' ? (
+                <ActivityFeed collabId={collab.id} />
+              ) : (
+                <ChatPanel
+                  messages={messages}
+                  onSendMessage={onSendMessage}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
     </AudioPlayerProvider>
   )
 }
