@@ -11,7 +11,6 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
-COPY apps/soul-service/package.json ./apps/soul-service/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
