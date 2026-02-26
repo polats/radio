@@ -187,7 +187,7 @@ export default async function Home() {
           <div className="space-y-3">
             <div className="bg-zinc-900/50 rounded-lg p-4">
               <h4 className="font-semibold text-white mb-2">🔗 API Endpoint</h4>
-              <code className="text-green-400 text-xs">https://api.apocalypseradio.xyz/graphql</code>
+              <code className="text-green-400 text-xs">{process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'}/graphql</code>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
