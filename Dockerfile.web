@@ -26,6 +26,10 @@ RUN mkdir -p /app/apps/web/public && touch /app/apps/web/public/.keep
 # Build shared package first (for types)
 RUN cd packages/shared && pnpm build
 
+# Pass NEXT_PUBLIC env vars for build-time inlining
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build Next.js app
 RUN cd apps/web && pnpm build
 
