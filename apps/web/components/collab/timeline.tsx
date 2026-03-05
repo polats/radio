@@ -15,6 +15,7 @@ interface Track {
   durationMs: number
   waveformData?: number[]
   signedAudioUrl?: string
+  patternData?: any
   submitter: {
     displayName?: string
     walletAddress: string

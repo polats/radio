@@ -18,6 +18,7 @@ interface Track {
   durationMs: number
   waveformData?: number[]
   signedAudioUrl?: string
+  patternData?: any
   notationAbc?: string
   creatorNotes?: string
   submitter: {

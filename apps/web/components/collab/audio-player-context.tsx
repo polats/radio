@@ -1,11 +1,13 @@
 'use client'
 
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react'
+import type { PatternData } from '@radio/shared'
 
 interface Track {
   id: string
   instrument: string
   signedAudioUrl?: string
+  patternData?: PatternData
   startTimeMs: number
   durationMs: number
 }
@@ -49,6 +51,9 @@ const AudioPlayerContext = createContext<AudioPlayerContextType | null>(null)
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const trackAudiosRef = useRef<Map<string, TrackAudio>>(new Map())
+  const patternTracksRef = useRef<Map<string, Track>>(new Map())
+  const patternSynthRef = useRef<any>(null)
+  const patternPlayingRef = useRef<Set<string>>(new Set())
   const animationRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number>(0)
   
@@ -82,6 +87,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     }
     
     // Add/update tracks
+    const patternMap = patternTracksRef.current
+    patternMap.clear()
+
     for (const track of newTracks) {
       if (track.signedAudioUrl) {
         let ta = currentMap.get(track.id)
@@ -91,13 +99,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           audio.volume = volume
           ta = { audio, track, loaded: false }
           currentMap.set(track.id, ta)
-          
+
           audio.addEventListener('canplaythrough', () => {
             const existing = currentMap.get(track.id)
             if (existing) existing.loaded = true
           })
         }
-        
+
         // Update source if changed
         if (ta.audio.src !== track.signedAudioUrl) {
           ta.audio.src = track.signedAudioUrl
@@ -105,6 +113,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
           ta.loaded = false
         }
         ta.track = track
+      } else if (track.patternData) {
+        // Pattern-only track — will be played via Tone.js
+        patternMap.set(track.id, track)
       }
     }
   }, [volume])
@@ -112,6 +123,34 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const setTotalDuration = useCallback((durationMs: number) => {
     setTotalDurationMs(durationMs)
   }, [])
+
+  const startPatternTrack = useCallback(async (track: Track) => {
+    if (!track.patternData) return
+    try {
+      if (!patternSynthRef.current) {
+        const mod = await import('../audio/pattern-synth')
+        patternSynthRef.current = mod.getPatternSynth()
+      }
+      await patternSynthRef.current.play(track.patternData, true)
+    } catch (e) {
+      console.error('Failed to start pattern synth:', e)
+    }
+  }, [])
+
+  const stopPatternTrack = useCallback(() => {
+    if (patternSynthRef.current) {
+      patternSynthRef.current.stop()
+    }
+  }, [])
+
+  const stopAllTracks = useCallback(() => {
+    for (const [, ta] of trackAudiosRef.current) {
+      ta.audio.pause()
+    }
+    stopPatternTrack()
+    patternPlayingRef.current.clear()
+    setPlayingTrackIds([])
+  }, [stopPatternTrack])
 
   // Animation loop for playback
   const tick = useCallback((timestamp: number) => {
@@ -138,27 +177,28 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   // Sync track playback with current time
   useEffect(() => {
     if (!isPlaying) return
-    
+
     const playing: string[] = []
-    
+
+    // Sync audio tracks
     for (const [id, ta] of trackAudiosRef.current) {
       const { track, audio, loaded } = ta
       if (!loaded || !track.signedAudioUrl) continue
-      
+
       // Check if track should be playing
       const trackStart = track.startTimeMs
       const trackEnd = trackStart + track.durationMs
       const shouldPlay = currentTimeMs >= trackStart && currentTimeMs < trackEnd
-      
+
       // Check mute/solo
       const isMuted = mutedTrackIds.includes(id)
       const isSoloed = soloTrackId === null || soloTrackId === id
       const audible = !isMuted && isSoloed
-      
+
       if (shouldPlay && audible) {
         // Calculate where in the track we should be
         const trackPosition = (currentTimeMs - trackStart) / 1000
-        
+
         // Start playing if not already
         if (audio.paused) {
           audio.currentTime = trackPosition
@@ -178,7 +218,32 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    
+
+    // Sync pattern tracks via Tone.js
+    for (const [id, track] of patternTracksRef.current) {
+      const trackStart = track.startTimeMs
+      const trackEnd = trackStart + track.durationMs
+      const shouldPlay = currentTimeMs >= trackStart && currentTimeMs < trackEnd
+
+      const isMuted = mutedTrackIds.includes(id)
+      const isSoloed = soloTrackId === null || soloTrackId === id
+      const audible = !isMuted && isSoloed
+
+      if (shouldPlay && audible) {
+        if (!patternPlayingRef.current.has(id)) {
+          // Start pattern synth
+          startPatternTrack(track)
+          patternPlayingRef.current.add(id)
+        }
+        playing.push(id)
+      } else {
+        if (patternPlayingRef.current.has(id)) {
+          stopPatternTrack()
+          patternPlayingRef.current.delete(id)
+        }
+      }
+    }
+
     setPlayingTrackIds(playing)
   }, [currentTimeMs, isPlaying, mutedTrackIds, soloTrackId])
 
@@ -200,13 +265,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [isPlaying, tick])
 
-  const stopAllTracks = useCallback(() => {
-    for (const [, ta] of trackAudiosRef.current) {
-      ta.audio.pause()
-    }
-    setPlayingTrackIds([])
-  }, [])
-
   const play = useCallback(() => {
     setIsPlaying(true)
   }, [])
@@ -224,7 +282,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const seek = useCallback((timeMs: number) => {
     setCurrentTimeMs(Math.max(0, Math.min(timeMs, totalDurationMs)))
-    // Reset all track positions
+    // Reset all audio track positions
     for (const [, ta] of trackAudiosRef.current) {
       const trackPos = (timeMs - ta.track.startTimeMs) / 1000
       if (trackPos >= 0 && trackPos < ta.track.durationMs / 1000) {
@@ -234,7 +292,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         ta.audio.currentTime = 0
       }
     }
-  }, [totalDurationMs])
+    // Reset pattern tracks — stop and let the sync effect restart them
+    stopPatternTrack()
+    patternPlayingRef.current.clear()
+  }, [totalDurationMs, stopPatternTrack])
 
   const setVolume = useCallback((vol: number) => {
     setVolumeState(vol)
