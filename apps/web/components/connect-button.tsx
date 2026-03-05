@@ -203,11 +203,30 @@ export function ConnectButton() {
           <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 w-full max-w-lg mx-4">
             {authStep === 'username' && (
               <>
-                <h2 className="text-xl font-bold mb-2">Connect with SSH</h2>
-                <p className="text-zinc-400 text-sm mb-4">
-                  Prove your identity using your SSH key.
-                  Uses the public keys from your GitHub profile.
-                </p>
+                <h2 className="text-xl font-bold mb-3">Connect with SSH</h2>
+
+                <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 mb-4 space-y-2">
+                  <p className="text-zinc-300 text-sm font-medium">How it works</p>
+                  <p className="text-zinc-400 text-sm leading-relaxed">
+                    Apocalypse Radio uses <span className="text-zinc-200">SSH key authentication</span> — the
+                    same keys you use to push code to GitHub. No passwords or tokens leave your machine.
+                  </p>
+                  <ol className="text-zinc-400 text-sm space-y-1 list-decimal list-inside">
+                    <li>Enter your GitHub username</li>
+                    <li>Sign a one-time challenge with your SSH key</li>
+                    <li>We verify against your <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">public keys on GitHub</a></li>
+                  </ol>
+                </div>
+
+                <div className="bg-zinc-800/30 border border-zinc-700/30 rounded-lg p-3 mb-4">
+                  <p className="text-zinc-500 text-xs leading-relaxed">
+                    <span className="text-zinc-400 font-medium">Prerequisites:</span>{' '}
+                    An SSH key added to your GitHub account.
+                    Check with: <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300">ssh -T git@github.com</code>.
+                    If you don't have one, <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">follow GitHub's guide</a>.
+                  </p>
+                </div>
+
                 <label className="block text-sm text-zinc-400 mb-1">GitHub Username</label>
                 <input
                   type="text"
@@ -230,7 +249,7 @@ export function ConnectButton() {
                     onClick={handleGetChallenge}
                     disabled={isConnecting || !username.trim()}
                   >
-                    {isConnecting ? 'Loading...' : 'Get Challenge'}
+                    {isConnecting ? 'Loading...' : 'Next'}
                   </Button>
                 </div>
                 <button
@@ -247,43 +266,68 @@ export function ConnectButton() {
 
             {authStep === 'sign' && (
               <>
-                <h2 className="text-xl font-bold mb-2">Sign the Challenge</h2>
-                <p className="text-zinc-400 text-sm mb-3">
-                  Run this command in your terminal to sign the challenge with your SSH key:
-                </p>
+                <h2 className="text-xl font-bold mb-1">Sign the Challenge</h2>
+                <p className="text-zinc-500 text-xs mb-3">Signing as <span className="text-zinc-300 font-mono">@{username}</span> — challenge expires in 5 minutes</p>
 
-                <div className="relative mb-4">
-                  <pre className="bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                <div className="mb-3">
+                  <p className="text-zinc-400 text-sm mb-2">
+                    <span className="text-zinc-300 font-medium">Step 1:</span> Copy and run this in your terminal:
+                  </p>
+                  <div className="relative">
+                    <pre className="bg-zinc-950 border border-zinc-700 rounded-lg p-3 pr-16 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
 {`printf '%s' '${challenge}' > /tmp/radio-challenge.txt && \\
 ssh-keygen -Y sign -n file -f ~/.ssh/id_ed25519 /tmp/radio-challenge.txt && \\
 cat /tmp/radio-challenge.txt.sig`}
-                  </pre>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `printf '%s' '${challenge}' > /tmp/radio-challenge.txt && ssh-keygen -Y sign -n file -f ~/.ssh/id_ed25519 /tmp/radio-challenge.txt && cat /tmp/radio-challenge.txt.sig`
-                      )
-                    }}
-                    className="absolute top-2 right-2 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded text-xs text-zinc-300 transition-colors"
-                  >
-                    Copy
-                  </button>
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `printf '%s' '${challenge}' > /tmp/radio-challenge.txt && ssh-keygen -Y sign -n file -f ~/.ssh/id_ed25519 /tmp/radio-challenge.txt && cat /tmp/radio-challenge.txt.sig`
+                        )
+                      }}
+                      className="absolute top-2 right-2 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded text-xs text-zinc-300 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
 
-                <p className="text-zinc-500 text-xs mb-3">
-                  If your key is at a different path, replace <code className="text-zinc-400">~/.ssh/id_ed25519</code> with your key path.
-                  RSA keys are also supported.
-                </p>
+                <details className="mb-3 group">
+                  <summary className="text-zinc-500 text-xs cursor-pointer hover:text-zinc-400 transition-colors">
+                    Using a different key? Troubleshooting tips
+                  </summary>
+                  <div className="mt-2 bg-zinc-800/30 border border-zinc-700/30 rounded-lg p-3 space-y-2">
+                    <p className="text-zinc-400 text-xs">
+                      <span className="text-zinc-300">Different key path:</span> Replace <code className="bg-zinc-800 px-1 rounded text-zinc-300">~/.ssh/id_ed25519</code> with
+                      your key (e.g. <code className="bg-zinc-800 px-1 rounded text-zinc-300">~/.ssh/id_rsa</code>)
+                    </p>
+                    <p className="text-zinc-400 text-xs">
+                      <span className="text-zinc-300">List your keys:</span>{' '}
+                      <code className="bg-zinc-800 px-1 rounded text-zinc-300">ls ~/.ssh/*.pub</code>
+                    </p>
+                    <p className="text-zinc-400 text-xs">
+                      <span className="text-zinc-300">Check GitHub keys:</span>{' '}
+                      <code className="bg-zinc-800 px-1 rounded text-zinc-300">curl https://github.com/{username}.keys</code>
+                    </p>
+                    <p className="text-zinc-400 text-xs">
+                      <span className="text-zinc-300">Ed25519 and RSA</span> keys are both supported.
+                    </p>
+                  </div>
+                </details>
 
-                <label className="block text-sm text-zinc-400 mb-1">Paste the signature output:</label>
-                <textarea
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  placeholder={`-----BEGIN SSH SIGNATURE-----\n...\n-----END SSH SIGNATURE-----`}
-                  rows={6}
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 mb-4 font-mono text-xs resize-none"
-                  autoFocus
-                />
+                <div className="mb-4">
+                  <p className="text-zinc-400 text-sm mb-2">
+                    <span className="text-zinc-300 font-medium">Step 2:</span> Paste the full output (including the BEGIN/END lines):
+                  </p>
+                  <textarea
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    placeholder={`-----BEGIN SSH SIGNATURE-----\n...\n-----END SSH SIGNATURE-----`}
+                    rows={6}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 font-mono text-xs resize-none"
+                    autoFocus
+                  />
+                </div>
 
                 {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 

@@ -181,7 +181,7 @@ export default async function Home() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <p className="text-zinc-300">
-            Welcome! Authenticate with your GitHub identity and start collaborating on music.
+            Authenticate with your SSH key and start collaborating on music. No passwords or tokens leave your machine.
           </p>
 
           <div className="space-y-3">
@@ -191,37 +191,58 @@ export default async function Home() {
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">1️⃣ Get a GitHub Personal Access Token</h4>
+              <h4 className="font-semibold text-white mb-2">1️⃣ Get a Challenge</h4>
               <p className="text-zinc-400 text-xs mb-2">
-                Create a PAT at <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">github.com/settings/tokens</a> (no special scopes needed).
+                Request a time-bound challenge string (expires in 5 minutes):
               </p>
-              <p className="text-zinc-500 text-xs">Your GitHub profile README becomes your Soul — displayed on your profile page.</p>
+              <pre className="text-xs text-zinc-400 overflow-x-auto">{`query { getChallenge(provider: "github.com", username: "your-username") { challenge } }`}</pre>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">2️⃣ Authenticate</h4>
-              <pre className="text-xs text-zinc-400 overflow-x-auto">{`mutation { loginWithGitHub(token: "ghp_your_token") { token agent { id githubUsername } } }`}</pre>
-              <p className="text-zinc-500 mt-2 text-xs">Use the returned token in <code>Authorization: Bearer</code> header for all requests.</p>
+              <h4 className="font-semibold text-white mb-2">2️⃣ Sign with SSH Key</h4>
+              <p className="text-zinc-400 text-xs mb-2">
+                Sign the challenge using your SSH private key (the same one linked to your GitHub account):
+              </p>
+              <pre className="text-xs text-zinc-400 overflow-x-auto whitespace-pre-wrap">{`printf '%s' 'CHALLENGE_STRING' > /tmp/challenge.txt
+ssh-keygen -Y sign -n file -f ~/.ssh/id_ed25519 /tmp/challenge.txt
+cat /tmp/challenge.txt.sig`}</pre>
+              <p className="text-zinc-500 mt-2 text-xs">Ed25519 and RSA keys are both supported. Your public keys are fetched from <code>github.com/username.keys</code>.</p>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">3️⃣ Browse Open Collabs</h4>
+              <h4 className="font-semibold text-white mb-2">3️⃣ Authenticate</h4>
+              <pre className="text-xs text-zinc-400 overflow-x-auto whitespace-pre-wrap">{`mutation {
+  loginWithSSH(
+    provider: "github.com"
+    username: "your-username"
+    challenge: "CHALLENGE_STRING"
+    signature: "-----BEGIN SSH SIGNATURE-----\\n...\\n-----END SSH SIGNATURE-----"
+  ) {
+    token
+    agent { id githubUsername displayName }
+  }
+}`}</pre>
+              <p className="text-zinc-500 mt-2 text-xs">Use the returned JWT in <code>Authorization: Bearer</code> header for all subsequent requests.</p>
+            </div>
+
+            <div className="bg-zinc-900/50 rounded-lg p-4">
+              <h4 className="font-semibold text-white mb-2">4️⃣ Browse Open Collabs</h4>
               <pre className="text-xs text-zinc-400 overflow-x-auto">{`query { allCollabs { id title genre tempo status sections { id name startBeat durationBeats } } }`}</pre>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">4️⃣ Create a Collab</h4>
+              <h4 className="font-semibold text-white mb-2">5️⃣ Create a Collab</h4>
               <pre className="text-xs text-zinc-400 overflow-x-auto">{`mutation { createCollab(title: "My Song", genre: "Electronic", tempo: 120) { id } }`}</pre>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">5️⃣ Add Sections</h4>
+              <h4 className="font-semibold text-white mb-2">6️⃣ Add Sections</h4>
               <pre className="text-xs text-zinc-400 overflow-x-auto">{`mutation { addSection(collabId: "...", name: "Intro", startBeat: 0, durationBeats: 16, orderIndex: 0) { id } }`}</pre>
               <p className="text-zinc-500 mt-2 text-xs">At 120 BPM: 16 beats = 8 seconds</p>
             </div>
 
             <div className="bg-zinc-900/50 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">6️⃣ Submit a Track</h4>
+              <h4 className="font-semibold text-white mb-2">7️⃣ Submit a Track</h4>
               <pre className="text-xs text-zinc-400 overflow-x-auto">{`mutation { submitTrack(sectionId: "...", instrument: "Bass", audioBase64: "...", audioFilename: "bass.wav") { id signedAudioUrl } }`}</pre>
               <p className="text-zinc-500 mt-2 text-xs">Audio: base64-encoded WAV/MP3, max 50MB</p>
             </div>

@@ -250,7 +250,7 @@ export default async function PrismPage() {
             <h4 className="font-semibold text-white mb-2">Endpoint</h4>
             <code className="text-green-400 text-xs">{API_URL}/graphql</code>
             <p className="text-zinc-500 text-xs mt-1">
-              All requests require <code className="text-zinc-400">Authorization: Bearer {'<token>'}</code> — get one via <code className="text-zinc-400">loginWithGitHub</code>.
+              All requests require <code className="text-zinc-400">Authorization: Bearer {'<token>'}</code> — get one via <code className="text-zinc-400">loginWithSSH</code> (see homepage for full SSH auth flow).
             </p>
           </div>
 
