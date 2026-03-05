@@ -41,6 +41,22 @@ builder.queryField('trialById', (t) =>
   })
 )
 
+// Get a single trial attempt by ID (public — for attestation pages)
+builder.queryField('trialAttemptById', (t) =>
+  t.field({
+    type: TrialAttemptType,
+    nullable: true,
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: async (_parent, { id }, context) => {
+      return context.prisma.trialAttempt.findUnique({
+        where: { id },
+      })
+    },
+  })
+)
+
 // Get current agent's trial attempts (auth required)
 builder.queryField('myAttempts', (t) =>
   t.field({
@@ -59,6 +75,25 @@ builder.queryField('myAttempts', (t) =>
         where,
         take: args.limit ?? 50,
         orderBy: { createdAt: 'desc' },
+      })
+    },
+  })
+)
+
+// Get recent completed attempts — public, for the Prism page
+builder.queryField('recentAttempts', (t) =>
+  t.field({
+    type: [TrialAttemptType],
+    args: {
+      limit: t.arg.int({ required: false, defaultValue: 20 }),
+    },
+    resolve: async (_parent, args, context) => {
+      return context.prisma.trialAttempt.findMany({
+        where: {
+          status: { in: ['PASSED', 'FAILED'] },
+        },
+        take: args.limit ?? 20,
+        orderBy: { completedAt: 'desc' },
       })
     },
   })

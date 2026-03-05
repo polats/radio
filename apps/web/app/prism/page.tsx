@@ -18,18 +18,49 @@ const TRIALS_QUERY = gql`
   }
 `
 
+const RECENT_ATTEMPTS_QUERY = gql`
+  query RecentAttempts($limit: Int) {
+    recentAttempts(limit: $limit) {
+      id
+      status
+      completedAt
+      scores
+      trial {
+        title
+        skillName
+        tier
+        iconEmoji
+      }
+      agent {
+        id
+        githubUsername
+        githubAvatarUrl
+        displayName
+        avatarUrl
+      }
+    }
+  }
+`
+
 export const dynamic = 'force-dynamic'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.apocalypseradio.xyz'
 
 export default async function PrismPage() {
   let trials: any[] = []
+  let recentAttempts: any[] = []
 
   try {
     const client = getClient()
-    const result = await client.query(TRIALS_QUERY, {})
-    if (result.data?.availableTrials) {
-      trials = result.data.availableTrials
+    const [trialsResult, attemptsResult] = await Promise.all([
+      client.query(TRIALS_QUERY, {}),
+      client.query(RECENT_ATTEMPTS_QUERY, { limit: 10 }),
+    ])
+    if (trialsResult.data?.availableTrials) {
+      trials = trialsResult.data.availableTrials
+    }
+    if (attemptsResult.data?.recentAttempts) {
+      recentAttempts = attemptsResult.data.recentAttempts
     }
   } catch (e: any) {
     console.error('Failed to fetch trials:', e)
@@ -134,6 +165,78 @@ export default async function PrismPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Recent Attestations */}
+      {recentAttempts.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Recent Attestations</h2>
+          <div className="space-y-3">
+            {recentAttempts.map((attempt: any) => {
+              const isPassed = attempt.status === 'PASSED'
+              const agent = attempt.agent
+              const trial = attempt.trial
+              const passedCount = attempt.scores?.checks?.filter((c: any) => c.passed).length ?? 0
+              const totalCount = attempt.scores?.checks?.length ?? 0
+
+              return (
+                <Link key={attempt.id} href={`/prism/attempt/${attempt.id}`}>
+                  <Card className="hover:border-amber-500/50 transition-colors mb-3">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        {/* Agent avatar */}
+                        {(agent.githubAvatarUrl || agent.avatarUrl) ? (
+                          <img
+                            src={agent.githubAvatarUrl || agent.avatarUrl}
+                            alt={agent.displayName || agent.githubUsername}
+                            className="w-10 h-10 rounded-full flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg flex-shrink-0">
+                            🤖
+                          </div>
+                        )}
+
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold truncate">
+                              {agent.displayName || agent.githubUsername || 'Unknown'}
+                            </span>
+                            <span className="text-zinc-600">·</span>
+                            <span className="text-sm text-zinc-400 truncate">
+                              {trial.iconEmoji} {trial.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+                            <span>Tier {trial.tier}</span>
+                            <span>·</span>
+                            <span>{passedCount}/{totalCount} checks</span>
+                            {attempt.completedAt && (
+                              <>
+                                <span>·</span>
+                                <span>{new Date(attempt.completedAt).toLocaleDateString()}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status badge */}
+                        <div className={`flex-shrink-0 text-sm font-bold px-3 py-1 rounded ${
+                          isPassed
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {attempt.status}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
 
