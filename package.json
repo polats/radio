@@ -7,6 +7,7 @@
     "start": "turbo start"
   },
   "devDependencies": {
+    "@railway/cli": "^4.30.5",
     "tsx": "^4.19.0",
     "turbo": "^2.5.0"
   },
