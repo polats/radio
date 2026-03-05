@@ -74,6 +74,61 @@ export interface PatternData {
   }
 }
 
+// ─── Key Signature Validation ─────────────────────────────────────
+
+// Map of key signature → note names in that scale
+export const KEY_SCALE_NOTES: Record<string, string[]> = {
+  // Major keys
+  'C':  ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+  'C#': ['C#', 'D#', 'F', 'F#', 'G#', 'A#', 'C'],
+  'D':  ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
+  'D#': ['D#', 'F', 'G', 'G#', 'A#', 'C', 'D'],
+  'E':  ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
+  'F':  ['F', 'G', 'A', 'A#', 'C', 'D', 'E'],
+  'F#': ['F#', 'G#', 'A#', 'B', 'C#', 'D#', 'F'],
+  'G':  ['G', 'A', 'B', 'C', 'D', 'E', 'F#'],
+  'G#': ['G#', 'A#', 'C', 'C#', 'D#', 'F', 'G'],
+  'A':  ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'],
+  'A#': ['A#', 'C', 'D', 'D#', 'F', 'G', 'A'],
+  'B':  ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'],
+  // Minor keys (natural minor)
+  'Cm':  ['C', 'D', 'D#', 'F', 'G', 'G#', 'A#'],
+  'C#m': ['C#', 'D#', 'E', 'F#', 'G#', 'A', 'B'],
+  'Dm':  ['D', 'E', 'F', 'G', 'A', 'A#', 'C'],
+  'D#m': ['D#', 'F', 'F#', 'G#', 'A#', 'B', 'C#'],
+  'Em':  ['E', 'F#', 'G', 'A', 'B', 'C', 'D'],
+  'Fm':  ['F', 'G', 'G#', 'A#', 'C', 'C#', 'D#'],
+  'F#m': ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E'],
+  'Gm':  ['G', 'A', 'A#', 'C', 'D', 'D#', 'F'],
+  'G#m': ['G#', 'A#', 'B', 'C#', 'D#', 'E', 'F#'],
+  'Am':  ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+  'A#m': ['A#', 'C', 'C#', 'D#', 'F', 'F#', 'G#'],
+  'Bm':  ['B', 'C#', 'D', 'E', 'F#', 'G', 'A'],
+}
+
+/** Extract the note name (without octave) from a pitch like "C#4" */
+export function pitchToNoteName(pitch: Pitch): string {
+  const match = pitch.match(/^([A-G]#?)(\d)$/)
+  if (!match) throw new Error(`Invalid pitch: ${pitch}`)
+  return match[1]
+}
+
+/** Check all notes in a melodic pattern fall within the given key's scale */
+export function validateKeySignature(pattern: MelodicPattern, keySignature: string): { valid: boolean; outOfKey: Pitch[] } {
+  const scaleNotes = KEY_SCALE_NOTES[keySignature]
+  if (!scaleNotes) return { valid: false, outOfKey: [] }
+
+  const outOfKey: Pitch[] = []
+  for (const note of pattern.notes) {
+    const noteName = pitchToNoteName(note.pitch)
+    if (!scaleNotes.includes(noteName)) {
+      outOfKey.push(note.pitch)
+    }
+  }
+
+  return { valid: outOfKey.length === 0, outOfKey }
+}
+
 // Validation helpers
 export function isValidDrumSound(sound: string): sound is DrumSound {
   return DRUM_SOUNDS.includes(sound as DrumSound)

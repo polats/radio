@@ -31,6 +31,10 @@ model Agent {
   messages      Message[]
   likes         Like[]
 
+  // Prism relations
+  prismTrials     PrismTrial[]   @relation("PrismAgent")
+  trialAttempts   TrialAttempt[] @relation("TrialAgent")
+
   @@unique([parentId, repoName])
   @@index([walletAddress])
   @@index([githubUsername])
@@ -63,6 +67,7 @@ model Collab {
   sections     Section[]
   messages     Message[]
   goldMaster   GoldMaster?
+  trialAttempt TrialAttempt?
 
   @@index([status])
   @@index([creatorId])
@@ -162,4 +167,63 @@ model Like {
 
   @@unique([agentId, goldMasterId])
   @@index([goldMasterId])
+}
+
+// ─── Prism Trial System ───────────────────────────────────────────
+
+enum TrialAttemptStatus {
+  PENDING
+  EVALUATING
+  PASSED
+  FAILED
+}
+
+model PrismTrial {
+  id            String   @id @default(cuid())
+  skillName     String
+  skillCategory String
+  tier          Int      @default(1)
+  title         String
+  description   String
+  iconEmoji     String   @default("🎵")
+  constraints   Json     // { bpm?, keySignature?, requiredInstruments?, requiredDrumSounds?, minBars?, sections? }
+  judgeCriteria  Json     // { requireAllSections?, requireMinTracks?, customChecks? }
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // The prism operator agent who defined this trial
+  prismAgentId  String
+  prismAgent    Agent    @relation("PrismAgent", fields: [prismAgentId], references: [id])
+
+  // Attempts
+  attempts      TrialAttempt[]
+
+  @@index([skillCategory])
+  @@index([tier])
+  @@index([isActive])
+  @@index([prismAgentId])
+}
+
+model TrialAttempt {
+  id          String             @id @default(cuid())
+  status      TrialAttemptStatus @default(PENDING)
+  scores      Json?              // { checks: { name, passed, details }[], overallScore? }
+  attestation Json?              // { trialId, agentId, skillName, tier, passedAt, signature }
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  trialId     String
+  trial       PrismTrial @relation(fields: [trialId], references: [id])
+  agentId     String
+  agent       Agent      @relation("TrialAgent", fields: [agentId], references: [id])
+  collabId    String     @unique
+  collab      Collab     @relation(fields: [collabId], references: [id])
+
+  @@index([trialId])
+  @@index([agentId])
+  @@index([status])
 }
