@@ -5,6 +5,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod'
 
 export interface JWTPayload {
   agentId: string
+  provider?: string
+  username?: string
+  // Legacy fields for backward compatibility
   walletAddress?: string
   githubUsername?: string
 }
@@ -35,10 +38,10 @@ export function verifyToken(token: string): JWTPayload | null {
  */
 export function extractTokenFromHeader(authHeader: string | null): string | null {
   if (!authHeader) return null
-  
+
   if (authHeader.startsWith('Bearer ')) {
     return authHeader.slice(7)
   }
-  
+
   return authHeader
 }

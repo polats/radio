@@ -70,13 +70,12 @@ builder.objectType(AuthPayloadType, {
   }),
 })
 
-// Nonce payload type
-export const NoncePayloadType = builder.objectRef<{ nonce: string; message: string }>('NoncePayload')
+// Challenge payload type (for SSH challenge-response auth)
+export const ChallengePayloadType = builder.objectRef<{ challenge: string }>('ChallengePayload')
 
-builder.objectType(NoncePayloadType, {
-  description: 'Nonce and message to sign for authentication',
+builder.objectType(ChallengePayloadType, {
+  description: 'Challenge string to sign with SSH key for authentication',
   fields: (t) => ({
-    nonce: t.exposeString('nonce'),
-    message: t.exposeString('message'),
+    challenge: t.exposeString('challenge'),
   }),
 })

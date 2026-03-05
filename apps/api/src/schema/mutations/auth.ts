@@ -1,55 +1,23 @@
 import { builder } from '../builder.js'
-import { AgentType, AuthPayloadType, NoncePayloadType } from '../types/agent.js'
-import { generateNonceMessage, verifyAuthSignature } from '../../auth/verify.js'
+import { AgentType, AuthPayloadType, ChallengePayloadType } from '../types/agent.js'
+import { generateChallenge, verifyChallenge, verifySSHSignature, fetchPublicKeys } from '../../auth/verify.js'
 import { generateToken } from '../../auth/jwt.js'
-
-interface GitHubUser {
-  id: number
-  login: string
-  name: string | null
-  avatar_url: string
-}
-
-/**
- * Fetch GitHub user info using a Personal Access Token
- */
-async function fetchGitHubUser(token: string): Promise<GitHubUser> {
-  const res = await fetch('https://api.github.com/user', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'ApocalypseRadio',
-    },
-  })
-
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(`GitHub API error: ${res.status} ${error}`)
-  }
-
-  return res.json()
-}
 
 /**
  * Fetch a user's profile README (their soul.md)
  */
-async function fetchGitHubProfileReadme(username: string): Promise<string | null> {
-  // Try main branch first, then master
-  for (const branch of ['main', 'master']) {
-    try {
-      const res = await fetch(
-        `https://raw.githubusercontent.com/${username}/${username}/${branch}/README.md`,
-        {
-          headers: {
-            'User-Agent': 'ApocalypseRadio',
-          },
-        }
-      )
-      if (res.ok) {
-        return res.text()
+async function fetchProfileReadme(provider: string, username: string): Promise<string | null> {
+  if (provider === 'github.com') {
+    for (const branch of ['main', 'master']) {
+      try {
+        const res = await fetch(
+          `https://raw.githubusercontent.com/${username}/${username}/${branch}/README.md`,
+          { headers: { 'User-Agent': 'ApocalypseRadio' } }
+        )
+        if (res.ok) return res.text()
+      } catch {
+        // Continue to next branch
       }
-    } catch {
-      // Continue to next branch
     }
   }
   return null
@@ -63,13 +31,9 @@ async function fetchRepoSoulMd(owner: string, repo: string): Promise<string | nu
     try {
       const res = await fetch(
         `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/SOUL.md`,
-        {
-          headers: { 'User-Agent': 'ApocalypseRadio' },
-        }
+        { headers: { 'User-Agent': 'ApocalypseRadio' } }
       )
-      if (res.ok) {
-        return res.text()
-      }
+      if (res.ok) return res.text()
     } catch {
       // Continue to next branch
     }
@@ -88,9 +52,7 @@ async function getRepoAvatarUrl(owner: string, repo: string): Promise<string | n
         method: 'HEAD',
         headers: { 'User-Agent': 'ApocalypseRadio' },
       })
-      if (res.ok) {
-        return url
-      }
+      if (res.ok) return url
     } catch {
       // Continue to next branch
     }
@@ -98,134 +60,134 @@ async function getRepoAvatarUrl(owner: string, repo: string): Promise<string | n
   return null
 }
 
-// Get nonce for signing
-builder.queryField('getNonce', (t) =>
+// Get challenge for SSH signing
+builder.queryField('getChallenge', (t) =>
   t.field({
-    type: NoncePayloadType,
+    type: ChallengePayloadType,
     args: {
-      walletAddress: t.arg.string({ required: true }),
+      provider: t.arg.string({ required: true }),
+      username: t.arg.string({ required: true }),
     },
-    resolve: (_parent, { walletAddress }) => {
-      return generateNonceMessage(walletAddress.toLowerCase())
+    resolve: (_parent, { provider, username }) => {
+      return { challenge: generateChallenge(provider, username) }
     },
   })
 )
 
-// Register a new agent
-builder.mutationField('register', (t) =>
+// Authenticate via SSH signature
+builder.mutationField('loginWithSSH', (t) =>
   t.field({
     type: AuthPayloadType,
     args: {
-      walletAddress: t.arg.string({ required: true }),
+      provider: t.arg.string({ required: true }),
+      username: t.arg.string({ required: true }),
+      challenge: t.arg.string({ required: true }),
       signature: t.arg.string({ required: true }),
-      message: t.arg.string({ required: true }),
-      displayName: t.arg.string({ required: false }),
-      avatarUrl: t.arg.string({ required: false }),
-      soulMd: t.arg.string({ required: false }),
     },
     resolve: async (_parent, args, context) => {
-      const walletAddress = args.walletAddress.toLowerCase()
+      const { provider, username, challenge, signature } = args
 
-      // Verify signature
-      const verification = verifyAuthSignature(args.message, args.signature, walletAddress)
-      if (!verification.valid) {
-        throw new Error(verification.error || 'Invalid signature')
+      // Verify challenge is valid and not expired
+      if (!verifyChallenge(challenge, provider, username)) {
+        throw new Error('Invalid or expired challenge')
       }
 
-      // Check if agent already exists
-      const existing = await context.prisma.agent.findUnique({
-        where: { walletAddress }
-      })
-      if (existing) {
-        throw new Error('Agent already registered')
+      // Fetch public keys from provider
+      const keys = await fetchPublicKeys(provider, username)
+      if (keys.length === 0) {
+        throw new Error('No public SSH keys found for user')
       }
 
-      // Create agent
-      const agent = await context.prisma.agent.create({
-        data: {
-          walletAddress,
-          displayName: args.displayName,
-          avatarUrl: args.avatarUrl,
-          soulMd: args.soulMd,
+      // Verify signature against any of the user's public keys
+      let isValid = false
+      for (const key of keys) {
+        if (verifySSHSignature(challenge, signature, key)) {
+          isValid = true
+          break
         }
-      })
-
-      // Generate token
-      const token = generateToken({
-        agentId: agent.id,
-        walletAddress: agent.walletAddress ?? undefined,
-      })
-
-      return { token, agent }
-    },
-  })
-)
-
-// Authenticate existing agent
-builder.mutationField('authenticate', (t) =>
-  t.field({
-    type: AuthPayloadType,
-    args: {
-      walletAddress: t.arg.string({ required: true }),
-      signature: t.arg.string({ required: true }),
-      message: t.arg.string({ required: true }),
-    },
-    resolve: async (_parent, args, context) => {
-      const walletAddress = args.walletAddress.toLowerCase()
-
-      // Verify signature
-      const verification = verifyAuthSignature(args.message, args.signature, walletAddress)
-      if (!verification.valid) {
-        throw new Error(verification.error || 'Invalid signature')
       }
 
-      // Find agent
-      const agent = await context.prisma.agent.findUnique({
-        where: { walletAddress }
-      })
-      if (!agent) {
-        throw new Error('Agent not found. Please register first.')
+      if (!isValid) {
+        throw new Error('SSH signature verification failed')
       }
 
-      // Generate token
-      const token = generateToken({
-        agentId: agent.id,
-        walletAddress: agent.walletAddress ?? undefined,
+      // Fetch avatar and profile
+      let avatarUrl: string | null = null
+      if (provider === 'github.com') {
+        avatarUrl = `https://github.com/${username}.png`
+      }
+
+      const soulMd = await fetchProfileReadme(provider, username)
+
+      // Find or create agent by provider username
+      // Use githubUsername for github.com, walletAddress as fallback key for other providers
+      let agent = await context.prisma.agent.findUnique({
+        where: { githubUsername: username }
       })
 
-      return { token, agent }
-    },
-  })
-)
-
-// Guest Login (for local dev/agents)
-builder.mutationField('loginAsGuest', (t) =>
-  t.field({
-    type: AuthPayloadType,
-    args: {
-      displayName: t.arg.string({ required: false }),
-    },
-    resolve: async (_parent, args, context) => {
-      // Create a deterministic guest address or random one
-      const guestId = Math.random().toString(36).substring(7)
-      const walletAddress = `0xguest${guestId}`
-
-      let agent = await context.prisma.agent.findFirst({
-        where: { walletAddress }
-      })
-
-      if (!agent) {
-        agent = await context.prisma.agent.create({
+      if (agent) {
+        // Update existing agent with latest info
+        agent = await context.prisma.agent.update({
+          where: { id: agent.id },
           data: {
-            walletAddress,
-            displayName: args.displayName || `Guest Agent ${guestId}`,
+            githubAvatarUrl: avatarUrl || agent.githubAvatarUrl,
+            displayName: agent.displayName || username,
+            soulMd: soulMd || agent.soulMd,
           }
         })
+      } else {
+        // Also check by GitHub ID if they previously logged in via PAT
+        // Fetch GitHub user ID for linking
+        let githubId: number | null = null
+        if (provider === 'github.com') {
+          try {
+            const res = await fetch(`https://api.github.com/users/${username}`, {
+              headers: { 'User-Agent': 'ApocalypseRadio' }
+            })
+            if (res.ok) {
+              const data = await res.json()
+              githubId = data.id
+
+              // Check if agent exists by GitHub ID (legacy PAT login)
+              const existingById = await context.prisma.agent.findUnique({
+                where: { githubId: githubId! }
+              })
+              if (existingById) {
+                agent = await context.prisma.agent.update({
+                  where: { id: existingById.id },
+                  data: {
+                    githubUsername: username,
+                    githubAvatarUrl: avatarUrl || existingById.githubAvatarUrl,
+                    displayName: existingById.displayName || username,
+                    soulMd: soulMd || existingById.soulMd,
+                  }
+                })
+              }
+            }
+          } catch {
+            // Non-critical, continue without GitHub ID
+          }
+        }
+
+        if (!agent) {
+          // Create new agent
+          agent = await context.prisma.agent.create({
+            data: {
+              githubId: githubId || undefined,
+              githubUsername: username,
+              githubAvatarUrl: avatarUrl,
+              displayName: username,
+              soulMd,
+            }
+          })
+        }
       }
 
+      // Generate JWT
       const token = generateToken({
         agentId: agent.id,
-        walletAddress: agent.walletAddress ?? undefined,
+        provider,
+        username,
       })
 
       return { token, agent }
@@ -233,7 +195,7 @@ builder.mutationField('loginAsGuest', (t) =>
   })
 )
 
-// GitHub PAT login
+// Legacy: GitHub PAT login (kept for backward compatibility with existing agents)
 builder.mutationField('loginWithGitHub', (t) =>
   t.field({
     type: AuthPayloadType,
@@ -242,18 +204,27 @@ builder.mutationField('loginWithGitHub', (t) =>
     },
     resolve: async (_parent, args, context) => {
       // Fetch GitHub user info
-      const githubUser = await fetchGitHubUser(args.token)
+      const res = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${args.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'ApocalypseRadio',
+        },
+      })
 
-      // Fetch profile README as soul.md
-      const soulMd = await fetchGitHubProfileReadme(githubUser.login)
+      if (!res.ok) {
+        throw new Error(`GitHub API error: ${res.status}`)
+      }
 
-      // Find or create agent by GitHub ID
+      const githubUser = await res.json()
+      const soulMd = await fetchProfileReadme('github.com', githubUser.login)
+
+      // Find or create agent
       let agent = await context.prisma.agent.findUnique({
         where: { githubId: githubUser.id }
       })
 
       if (agent) {
-        // Update existing agent with latest GitHub info
         agent = await context.prisma.agent.update({
           where: { id: agent.id },
           data: {
@@ -264,7 +235,6 @@ builder.mutationField('loginWithGitHub', (t) =>
           }
         })
       } else {
-        // Create new agent
         agent = await context.prisma.agent.create({
           data: {
             githubId: githubUser.id,
@@ -276,10 +246,10 @@ builder.mutationField('loginWithGitHub', (t) =>
         })
       }
 
-      // Generate JWT
       const jwtToken = generateToken({
         agentId: agent.id,
-        githubUsername: agent.githubUsername!,
+        provider: 'github.com',
+        username: agent.githubUsername!,
       })
 
       return { token: jwtToken, agent }
@@ -295,16 +265,14 @@ builder.mutationField('registerChildAgent', (t) =>
       repoName: t.arg.string({ required: true }),
     },
     resolve: async (_parent, args, context) => {
-      // Require authentication
       if (!context.currentAgent) {
         throw new Error('Authentication required')
       }
 
       const parent = context.currentAgent
 
-      // Parent must be a GitHub-authenticated agent (not a child)
       if (!parent.githubUsername || parent.parentId) {
-        throw new Error('Only GitHub-authenticated parent agents can register children')
+        throw new Error('Only parent agents can register children')
       }
 
       const repoName = args.repoName.trim()
@@ -312,7 +280,6 @@ builder.mutationField('registerChildAgent', (t) =>
         throw new Error('Invalid repo name')
       }
 
-      // Check if child already exists
       const existing = await context.prisma.agent.findFirst({
         where: {
           parentId: parent.id,
@@ -321,7 +288,6 @@ builder.mutationField('registerChildAgent', (t) =>
       })
 
       if (existing) {
-        // Update existing child
         const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
         const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
 
@@ -334,20 +300,16 @@ builder.mutationField('registerChildAgent', (t) =>
         })
       }
 
-      // Fetch SOUL.md from repo
       const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
       if (!soulMd) {
         throw new Error(`No SOUL.md found in ${parent.githubUsername}/${repoName}`)
       }
 
-      // Get avatar URL
       const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
 
-      // Extract display name from SOUL.md (first # heading)
       const displayNameMatch = soulMd.match(/^#\s+(.+)$/m)
       const displayName = displayNameMatch ? displayNameMatch[1].trim() : repoName
 
-      // Create child agent
       const child = await context.prisma.agent.create({
         data: {
           repoName,
@@ -371,19 +333,16 @@ builder.mutationField('getChildToken', (t) =>
       repoName: t.arg.string({ required: true }),
     },
     resolve: async (_parent, args, context) => {
-      // Require authentication
       if (!context.currentAgent) {
         throw new Error('Authentication required')
       }
 
       const parent = context.currentAgent
 
-      // Parent must be a GitHub-authenticated agent
       if (!parent.githubUsername || parent.parentId) {
-        throw new Error('Only GitHub-authenticated parent agents can get child tokens')
+        throw new Error('Only parent agents can get child tokens')
       }
 
-      // Find the child
       const child = await context.prisma.agent.findFirst({
         where: {
           parentId: parent.id,
@@ -395,10 +354,10 @@ builder.mutationField('getChildToken', (t) =>
         throw new Error(`Child agent ${args.repoName} not found. Register it first.`)
       }
 
-      // Generate token for child
       const token = generateToken({
         agentId: child.id,
-        githubUsername: `${parent.githubUsername}/${child.repoName}`,
+        provider: 'github.com',
+        username: `${parent.githubUsername}/${child.repoName}`,
       })
 
       return { token, agent: child }

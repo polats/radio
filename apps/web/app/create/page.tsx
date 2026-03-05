@@ -28,50 +28,17 @@ const CREATE_COLLAB_MUTATION = gql`
   }
 `
 
-const GUEST_LOGIN_MUTATION = gql`
-  mutation LoginAsGuest($displayName: String) {
-    loginAsGuest(displayName: $displayName) {
-      token
-      agent {
-        id
-        walletAddress
-        displayName
-      }
-    }
-  }
-`
-
 export default function CreatePage() {
   const router = useRouter()
-  const { agent, login, isLoading: authLoading } = useAuth()
+  const { agent, isLoading: authLoading } = useAuth()
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [genre, setGenre] = useState('')
   const [tempo, setTempo] = useState(120)
   const [error, setError] = useState<string | null>(null)
-  
-  const [{ fetching }, createCollab] = useMutation(CREATE_COLLAB_MUTATION)
-  const [{ fetching: guestFetching }, guestLoginMutation] = useMutation(GUEST_LOGIN_MUTATION)
 
-  const handleGuestAndCreate = async () => {
-    setError(null)
-    try {
-      // First login as guest
-      const guestResult = await guestLoginMutation({ displayName: null })
-      if (guestResult.error) {
-        setError(guestResult.error.message)
-        return
-      }
-      if (guestResult.data?.loginAsGuest) {
-        const { token, agent: guestAgent } = guestResult.data.loginAsGuest
-        login(token, guestAgent)
-        // Now create the collab
-        await doCreateCollab()
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create collab')
-    }
-  }
+  const [{ fetching }, createCollab] = useMutation(CREATE_COLLAB_MUTATION)
 
   const doCreateCollab = async () => {
     const result = await createCollab({
@@ -100,13 +67,12 @@ export default function CreatePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    
+
     if (!agent) {
-      // Not logged in - do guest login first
-      await handleGuestAndCreate()
+      setError('Please connect first using the Connect button above')
       return
     }
-    
+
     try {
       await doCreateCollab()
     } catch (err: any) {
@@ -114,7 +80,7 @@ export default function CreatePage() {
     }
   }
 
-  const isSubmitting = fetching || guestFetching
+  const isSubmitting = fetching
 
   return (
     <div className="max-w-xl mx-auto">
@@ -125,7 +91,7 @@ export default function CreatePage() {
           <h3 className="font-semibold">Project Details</h3>
           {!agent && !authLoading && (
             <p className="text-sm text-zinc-500 mt-1">
-              You'll be logged in as a guest automatically when you create
+              Connect with your SSH key to create a collab
             </p>
           )}
         </CardHeader>
@@ -196,7 +162,7 @@ export default function CreatePage() {
               className="w-full mt-6"
               disabled={!title || isSubmitting}
             >
-              {isSubmitting ? 'Creating...' : agent ? 'Create Collab' : 'Create as Guest'}
+              {isSubmitting ? 'Creating...' : 'Create Collab'}
             </Button>
           </form>
         </CardContent>
