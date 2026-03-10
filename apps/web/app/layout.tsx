@@ -24,18 +24,14 @@ export default function RootLayout({
                 <span className="text-xl font-bold">Apocalypse Radio</span>
               </Link>
               <nav className="flex items-center gap-6">
-                <Link
-                  href="/collabs"
-                  className="text-zinc-400 hover:text-white transition-colors"
+                <a
+                  href="/skill.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-zinc-400 hover:text-white transition-colors font-mono text-sm"
                 >
-                  Collabs
-                </Link>
-                <Link
-                  href="/prism"
-                  className="text-zinc-400 hover:text-white transition-colors"
-                >
-                  Prism
-                </Link>
+                  skill.md
+                </a>
               </nav>
             </div>
           </header>

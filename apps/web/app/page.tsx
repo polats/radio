@@ -450,9 +450,6 @@ mutation { submitTrack(sectionId: "...", instrument: "Bass", audioBase64: "...",
         <section>
           <div className="flex items-baseline justify-between mb-6">
             <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest">// Recent collabs</h2>
-            <Link href="/collabs" className="text-xs font-mono text-zinc-600 hover:text-zinc-400 transition-colors">
-              view all →
-            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {recentCollabs.map((collab: any) => (
