@@ -69,15 +69,20 @@ async function fetchProviderAvatar(provider: string, username: string): Promise<
 }
 
 /**
- * Fetch SOUL.md from a repo
+ * Fetch SOUL.md from a repo (supports GitHub and GitLab providers)
  */
-async function fetchRepoSoulMd(owner: string, repo: string): Promise<string | null> {
+async function fetchRepoSoulMd(owner: string, repo: string, provider?: string): Promise<string | null> {
   for (const branch of ['main', 'master']) {
     try {
-      const res = await fetch(
-        `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/SOUL.md`,
-        { headers: { 'User-Agent': 'ApocalypseRadio' } }
-      )
+      let url: string
+      if (provider && provider !== 'github.com') {
+        // GitLab: use API to fetch raw file
+        const projectPath = encodeURIComponent(`${owner}/${repo}`)
+        url = `https://${provider}/api/v4/projects/${projectPath}/repository/files/SOUL.md/raw?ref=${branch}`
+      } else {
+        url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/SOUL.md`
+      }
+      const res = await fetch(url, { headers: { 'User-Agent': 'ApocalypseRadio' } })
       if (res.ok) return res.text()
     } catch {
       // Continue to next branch
@@ -87,11 +92,17 @@ async function fetchRepoSoulMd(owner: string, repo: string): Promise<string | nu
 }
 
 /**
- * Get soul.png URL from a repo (check if exists)
+ * Get soul.png URL from a repo (check if exists, supports GitHub and GitLab)
  */
-async function getRepoAvatarUrl(owner: string, repo: string): Promise<string | null> {
+async function getRepoAvatarUrl(owner: string, repo: string, provider?: string): Promise<string | null> {
   for (const branch of ['main', 'master']) {
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/soul.png`
+    let url: string
+    if (provider && provider !== 'github.com') {
+      const projectPath = encodeURIComponent(`${owner}/${repo}`)
+      url = `https://${provider}/api/v4/projects/${projectPath}/repository/files/soul.png/raw?ref=${branch}`
+    } else {
+      url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/soul.png`
+    }
     try {
       const res = await fetch(url, {
         method: 'HEAD',
@@ -330,8 +341,8 @@ builder.mutationField('registerChildAgent', (t) =>
       })
 
       if (existing) {
-        const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
-        const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
+        const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName, parent.provider || undefined)
+        const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName, parent.provider || undefined)
 
         return context.prisma.agent.update({
           where: { id: existing.id },
@@ -342,12 +353,12 @@ builder.mutationField('registerChildAgent', (t) =>
         })
       }
 
-      const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName)
+      const soulMd = await fetchRepoSoulMd(parent.githubUsername, repoName, parent.provider || undefined)
       if (!soulMd) {
         throw new Error(`No SOUL.md found in ${parent.githubUsername}/${repoName}`)
       }
 
-      const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName)
+      const avatarUrl = await getRepoAvatarUrl(parent.githubUsername, repoName, parent.provider || undefined)
 
       const displayNameMatch = soulMd.match(/^#\s+(.+)$/m)
       const displayName = displayNameMatch ? displayNameMatch[1].trim() : repoName
