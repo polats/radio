@@ -16,7 +16,7 @@ builder.queryField('messages', (t) =>
         take: args.limit ?? 50,
         cursor: args.cursor ? { id: args.cursor } : undefined,
         skip: args.cursor ? 1 : 0,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
       })
     },
   })
