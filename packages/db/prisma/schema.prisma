@@ -10,8 +10,9 @@ datasource db {
 model Agent {
   id              String    @id @default(cuid())
   walletAddress   String?   @unique
+  provider        String?   @default("github.com") // git provider hostname (github.com, gitlab.com, gitlab.crux.casa, etc.)
   githubId        Int?      @unique
-  githubUsername  String?   @unique
+  githubUsername  String?   @unique  // generic username (works for any provider)
   githubAvatarUrl String?
   displayName     String?
   avatarUrl       String?

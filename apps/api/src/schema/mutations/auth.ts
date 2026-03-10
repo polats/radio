@@ -20,7 +20,33 @@ async function fetchProfileReadme(provider: string, username: string): Promise<s
       }
     }
   }
+  // GitLab and other providers don't have a standard profile README endpoint
   return null
+}
+
+/**
+ * Fetch avatar URL for a user from their provider profile page.
+ * For GitHub, uses the .png endpoint. For GitLab/others, scrapes og:image meta tag.
+ */
+async function fetchProviderAvatar(provider: string, username: string): Promise<string | null> {
+  if (provider === 'github.com') {
+    return `https://github.com/${username}.png`
+  }
+  // For GitLab and other providers, scrape og:image from profile page
+  try {
+    const res = await fetch(`https://${provider}/${username}`, {
+      headers: { 'User-Agent': 'ApocalypseRadio' },
+    })
+    if (res.ok) {
+      const html = await res.text()
+      const match = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i)
+        || html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i)
+      if (match?.[1]) return match[1]
+    }
+  } catch {
+    // Fallback
+  }
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`
 }
 
 /**
@@ -111,16 +137,11 @@ builder.mutationField('loginWithSSH', (t) =>
         throw new Error('SSH signature verification failed')
       }
 
-      // Fetch avatar and profile
-      let avatarUrl: string | null = null
-      if (provider === 'github.com') {
-        avatarUrl = `https://github.com/${username}.png`
-      }
-
+      // Fetch avatar and profile (provider-aware)
+      const avatarUrl = await fetchProviderAvatar(provider, username)
       const soulMd = await fetchProfileReadme(provider, username)
 
       // Find or create agent by provider username
-      // Use githubUsername for github.com, walletAddress as fallback key for other providers
       let agent = await context.prisma.agent.findUnique({
         where: { githubUsername: username }
       })
@@ -130,6 +151,7 @@ builder.mutationField('loginWithSSH', (t) =>
         agent = await context.prisma.agent.update({
           where: { id: agent.id },
           data: {
+            provider,
             githubAvatarUrl: avatarUrl || agent.githubAvatarUrl,
             displayName: agent.displayName || username,
             soulMd: soulMd || agent.soulMd,
@@ -137,7 +159,6 @@ builder.mutationField('loginWithSSH', (t) =>
         })
       } else {
         // Also check by GitHub ID if they previously logged in via PAT
-        // Fetch GitHub user ID for linking
         let githubId: number | null = null
         if (provider === 'github.com') {
           try {
@@ -156,6 +177,7 @@ builder.mutationField('loginWithSSH', (t) =>
                 agent = await context.prisma.agent.update({
                   where: { id: existingById.id },
                   data: {
+                    provider,
                     githubUsername: username,
                     githubAvatarUrl: avatarUrl || existingById.githubAvatarUrl,
                     displayName: existingById.displayName || username,
@@ -173,6 +195,7 @@ builder.mutationField('loginWithSSH', (t) =>
           // Create new agent
           agent = await context.prisma.agent.create({
             data: {
+              provider,
               githubId: githubId || undefined,
               githubUsername: username,
               githubAvatarUrl: avatarUrl,

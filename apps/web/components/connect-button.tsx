@@ -19,6 +19,7 @@ const LOGIN_WITH_SSH = gql`
       token
       agent {
         id
+        provider
         githubId
         githubUsername
         githubAvatarUrl
@@ -35,6 +36,7 @@ const GITHUB_LOGIN_MUTATION = gql`
       token
       agent {
         id
+        provider
         githubId
         githubUsername
         githubAvatarUrl
@@ -45,12 +47,35 @@ const GITHUB_LOGIN_MUTATION = gql`
   }
 `
 
-type AuthStep = 'username' | 'sign' | 'paste'
+type AuthStep = 'provider' | 'username' | 'sign' | 'paste'
+
+type ProviderOption = {
+  id: string
+  label: string
+  hostname: string
+  color: string
+  dotColor: string
+  icon: string
+}
+
+const PROVIDERS: ProviderOption[] = [
+  { id: 'github', label: 'GitHub', hostname: 'github.com', color: 'purple', dotColor: 'bg-purple-500', icon: '⬡' },
+  { id: 'gitlab', label: 'GitLab', hostname: 'gitlab.com', color: 'orange', dotColor: 'bg-orange-500', icon: '◆' },
+  { id: 'gitlab-crux', label: 'Crux Casa', hostname: 'gitlab.crux.casa', color: 'orange', dotColor: 'bg-orange-500', icon: '◆' },
+]
+
+function getProviderInfo(hostname: string | undefined): ProviderOption {
+  const found = PROVIDERS.find(p => p.hostname === hostname)
+  if (found) return found
+  return { id: 'custom', label: hostname || 'Unknown', hostname: hostname || '', color: 'orange', dotColor: 'bg-orange-500', icon: '◆' }
+}
 
 export function ConnectButton() {
   const { agent, login, logout, isLoading } = useAuth()
   const [showModal, setShowModal] = useState(false)
-  const [authStep, setAuthStep] = useState<AuthStep>('username')
+  const [authStep, setAuthStep] = useState<AuthStep>('provider')
+  const [selectedProvider, setSelectedProvider] = useState<string>('github.com')
+  const [customProvider, setCustomProvider] = useState('')
   const [username, setUsername] = useState('')
   const [challenge, setChallenge] = useState('')
   const [signature, setSignature] = useState('')
@@ -64,9 +89,15 @@ export function ConnectButton() {
   const [, loginWithSSH] = useMutation(LOGIN_WITH_SSH)
   const [, githubLoginMutation] = useMutation(GITHUB_LOGIN_MUTATION)
 
+  const provider = selectedProvider === 'custom' ? customProvider.trim() : selectedProvider
+  const providerInfo = getProviderInfo(provider)
+  const isGitHub = provider === 'github.com'
+
   const resetModal = () => {
     setShowModal(false)
-    setAuthStep('username')
+    setAuthStep('provider')
+    setSelectedProvider('github.com')
+    setCustomProvider('')
     setUsername('')
     setChallenge('')
     setSignature('')
@@ -76,7 +107,11 @@ export function ConnectButton() {
 
   const handleGetChallenge = async () => {
     if (!username.trim()) {
-      setError('Please enter your GitHub username')
+      setError('Please enter your username')
+      return
+    }
+    if (!provider || !provider.includes('.')) {
+      setError('Please enter a valid provider hostname')
       return
     }
 
@@ -89,7 +124,7 @@ export function ConnectButton() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `query { getChallenge(provider: "github.com", username: "${username.trim()}") { challenge } }`
+          query: `query { getChallenge(provider: "${provider}", username: "${username.trim()}") { challenge } }`
         })
       })
       const data = await res.json()
@@ -118,7 +153,7 @@ export function ConnectButton() {
 
     try {
       const result = await loginWithSSH({
-        provider: 'github.com',
+        provider,
         username: username.trim(),
         challenge,
         signature: signature.trim(),
@@ -167,21 +202,28 @@ export function ConnectButton() {
   }
 
   if (agent) {
-    const isGitHub = !!agent.githubUsername
+    const agentProvider = getProviderInfo(agent.provider)
+    const hasProfile = !!agent.githubUsername
+    const profileUrl = hasProfile ? `/profile/${agent.githubUsername}` : undefined
+    const externalUrl = hasProfile ? `https://${agent.provider || 'github.com'}/${agent.githubUsername}` : undefined
+
     return (
       <div className="flex items-center gap-2">
-        {isGitHub && agent.githubAvatarUrl && (
-          <img
-            src={agent.githubAvatarUrl}
-            alt={agent.githubUsername}
-            className="w-6 h-6 rounded-full"
-          />
+        {agent.githubAvatarUrl && (
+          <div className="relative">
+            <img
+              src={agent.githubAvatarUrl}
+              alt={agent.githubUsername}
+              className="w-6 h-6 rounded-full"
+            />
+            <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${agentProvider.dotColor} rounded-full border border-zinc-900`} />
+          </div>
         )}
         <a
-          href={isGitHub ? `/profile/${agent.githubUsername}` : undefined}
-          className={`text-sm text-zinc-400 ${isGitHub ? 'hover:text-white cursor-pointer' : ''}`}
+          href={profileUrl}
+          className={`text-sm text-zinc-400 ${hasProfile ? 'hover:text-white cursor-pointer' : ''}`}
         >
-          {isGitHub && <span className="text-zinc-500 mr-1">@</span>}
+          {hasProfile && <span className="text-zinc-500 mr-1">@</span>}
           {agent.displayName || agent.githubUsername || 'Agent'}
         </a>
         <Button variant="outline" size="sm" onClick={logout}>
@@ -201,7 +243,9 @@ export function ConnectButton() {
       {showModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 w-full max-w-lg mx-4">
-            {authStep === 'username' && (
+
+            {/* Step 1: Choose Provider */}
+            {authStep === 'provider' && (
               <>
                 <h2 className="text-xl font-bold mb-3">Connect with SSH</h2>
 
@@ -209,36 +253,63 @@ export function ConnectButton() {
                   <p className="text-zinc-300 text-sm font-medium">How it works</p>
                   <p className="text-zinc-400 text-sm leading-relaxed">
                     Apocalypse Radio uses <span className="text-zinc-200">SSH key authentication</span> — the
-                    same keys you use to push code to GitHub. No passwords or tokens leave your machine.
+                    same keys you use to push code. No passwords or tokens leave your machine.
                   </p>
                   <ol className="text-zinc-400 text-sm space-y-1 list-decimal list-inside">
-                    <li>Enter your GitHub username</li>
+                    <li>Choose your Git provider</li>
                     <li>Sign a one-time challenge with your SSH key</li>
-                    <li>We verify against your <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">public keys on GitHub</a></li>
+                    <li>We verify against your public keys on the provider</li>
                   </ol>
                 </div>
 
-                <div className="bg-zinc-800/30 border border-zinc-700/30 rounded-lg p-3 mb-4">
-                  <p className="text-zinc-500 text-xs leading-relaxed">
-                    <span className="text-zinc-400 font-medium">Prerequisites:</span>{' '}
-                    An SSH key added to your GitHub account.
-                    Check with: <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300">ssh -T git@github.com</code>.
-                    If you don't have one, <a href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">follow GitHub's guide</a>.
-                  </p>
+                <label className="block text-sm text-zinc-400 mb-2">Choose your provider</label>
+                <div className="grid grid-cols-1 gap-2 mb-4">
+                  {PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedProvider(p.hostname)
+                        setError(null)
+                      }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all ${
+                        selectedProvider === p.hostname
+                          ? `border-${p.color}-500/50 bg-${p.color}-500/10 text-white`
+                          : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+                      }`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full ${p.dotColor}`} />
+                      <span className="font-medium">{p.label}</span>
+                      <span className="text-xs text-zinc-500 ml-auto font-mono">{p.hostname}</span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setSelectedProvider('custom')
+                      setError(null)
+                    }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-all ${
+                      selectedProvider === 'custom'
+                        ? 'border-zinc-500/50 bg-zinc-500/10 text-white'
+                        : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-zinc-500" />
+                    <span className="font-medium">Custom GitLab</span>
+                    <span className="text-xs text-zinc-500 ml-auto">self-hosted</span>
+                  </button>
                 </div>
 
-                <label className="block text-sm text-zinc-400 mb-1">GitHub Username</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="your-username"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 mb-4 font-mono text-sm"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleGetChallenge()
-                  }}
-                />
+                {selectedProvider === 'custom' && (
+                  <input
+                    type="text"
+                    value={customProvider}
+                    onChange={(e) => setCustomProvider(e.target.value)}
+                    placeholder="gitlab.example.com"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 mb-4 font-mono text-sm"
+                    autoFocus
+                  />
+                )}
+
                 {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={resetModal}>
@@ -246,10 +317,16 @@ export function ConnectButton() {
                   </Button>
                   <Button
                     className="flex-1"
-                    onClick={handleGetChallenge}
-                    disabled={isConnecting || !username.trim()}
+                    onClick={() => {
+                      if (selectedProvider === 'custom' && (!customProvider.trim() || !customProvider.includes('.'))) {
+                        setError('Please enter a valid hostname (e.g. gitlab.example.com)')
+                        return
+                      }
+                      setAuthStep('username')
+                      setError(null)
+                    }}
                   >
-                    {isConnecting ? 'Loading...' : 'Next'}
+                    Next
                   </Button>
                 </div>
                 <button
@@ -264,10 +341,66 @@ export function ConnectButton() {
               </>
             )}
 
+            {/* Step 2: Enter Username */}
+            {authStep === 'username' && (
+              <>
+                <h2 className="text-xl font-bold mb-3">Connect with SSH</h2>
+
+                <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-zinc-800/50 border border-zinc-700/50 rounded-lg">
+                  <span className={`w-2.5 h-2.5 rounded-full ${providerInfo.dotColor}`} />
+                  <span className="text-sm text-zinc-300">{providerInfo.label}</span>
+                  <span className="text-xs text-zinc-500 font-mono">{provider}</span>
+                  <button
+                    onClick={() => { setAuthStep('provider'); setError(null) }}
+                    className="ml-auto text-xs text-zinc-500 hover:text-zinc-300"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                <div className="bg-zinc-800/30 border border-zinc-700/30 rounded-lg p-3 mb-4">
+                  <p className="text-zinc-500 text-xs leading-relaxed">
+                    <span className="text-zinc-400 font-medium">Prerequisites:</span>{' '}
+                    An SSH key added to your {providerInfo.label} account.
+                    Check with: <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300">ssh -T git@{provider}</code>
+                  </p>
+                </div>
+
+                <label className="block text-sm text-zinc-400 mb-1">{providerInfo.label} Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your-username"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 mb-4 font-mono text-sm"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleGetChallenge()
+                  }}
+                />
+                {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => { setAuthStep('provider'); setError(null) }}>
+                    Back
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleGetChallenge}
+                    disabled={isConnecting || !username.trim()}
+                  >
+                    {isConnecting ? 'Loading...' : 'Next'}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Step 3: Sign Challenge */}
             {authStep === 'sign' && (
               <>
                 <h2 className="text-xl font-bold mb-1">Sign the Challenge</h2>
-                <p className="text-zinc-500 text-xs mb-3">Signing as <span className="text-zinc-300 font-mono">@{username}</span> — challenge expires in 5 minutes</p>
+                <p className="text-zinc-500 text-xs mb-3">
+                  Signing as <span className={`font-mono ${isGitHub ? 'text-purple-400' : 'text-orange-400'}`}>@{username}</span> on <span className="text-zinc-300">{providerInfo.label}</span> — challenge expires in 5 minutes
+                </p>
 
                 <div className="mb-3">
                   <p className="text-zinc-400 text-sm mb-2">
@@ -306,8 +439,8 @@ cat /tmp/radio-challenge.txt.sig`}
                       <code className="bg-zinc-800 px-1 rounded text-zinc-300">ls ~/.ssh/*.pub</code>
                     </p>
                     <p className="text-zinc-400 text-xs">
-                      <span className="text-zinc-300">Check GitHub keys:</span>{' '}
-                      <code className="bg-zinc-800 px-1 rounded text-zinc-300">curl https://github.com/{username}.keys</code>
+                      <span className="text-zinc-300">Check {providerInfo.label} keys:</span>{' '}
+                      <code className="bg-zinc-800 px-1 rounded text-zinc-300">curl https://{provider}/{username}.keys</code>
                     </p>
                     <p className="text-zinc-400 text-xs">
                       <span className="text-zinc-300">Ed25519 and RSA</span> keys are both supported.

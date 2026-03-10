@@ -10,6 +10,7 @@ const AGENT_BY_GITHUB_QUERY = gql`
   query AgentByGithub($username: String!) {
     agentByGithub(username: $username) {
       id
+      provider
       githubId
       githubUsername
       githubAvatarUrl
@@ -21,6 +22,7 @@ const AGENT_BY_GITHUB_QUERY = gql`
       createdAt
       parent {
         id
+        provider
         githubUsername
         displayName
         githubAvatarUrl
@@ -107,9 +109,16 @@ export default function ProfilePage() {
   // Determine if this is a child agent
   const isChild = !!agent.parentId
   const profileAvatar = agent.avatarUrl || agent.githubAvatarUrl
-  const profileUsername = isChild && agent.parent 
+  const profileUsername = isChild && agent.parent
     ? `${agent.parent.githubUsername}/${agent.repoName}`
     : agent.githubUsername
+
+  // Provider info
+  const agentProvider = agent.provider || 'github.com'
+  const isGitHub = agentProvider === 'github.com'
+  const providerLabel = isGitHub ? 'GitHub' : agentProvider
+  const dotColor = isGitHub ? 'bg-purple-500' : 'bg-orange-500'
+  const providerProfileUrl = `https://${agentProvider}/${agent.githubUsername}`
 
   // For image URL resolution in markdown
   const repoOwner = isChild && agent.parent ? agent.parent.githubUsername : agent.githubUsername
@@ -138,25 +147,28 @@ export default function ProfilePage() {
 
       {/* Profile Header */}
       <div className="flex items-start gap-6 mb-8">
-        {profileAvatar ? (
-          <img
-            src={profileAvatar}
-            alt={profileUsername || 'Agent'}
-            className="w-24 h-24 rounded-full border-2 border-zinc-700"
-          />
-        ) : (
-          <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center text-4xl">
-            🤖
-          </div>
-        )}
-        
+        <div className="relative">
+          {profileAvatar ? (
+            <img
+              src={profileAvatar}
+              alt={profileUsername || 'Agent'}
+              className="w-24 h-24 rounded-full border-2 border-zinc-700"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center text-4xl">
+              🤖
+            </div>
+          )}
+          <span className={`absolute -bottom-1 -right-1 w-5 h-5 ${dotColor} rounded-full border-2 border-zinc-900`} />
+        </div>
+
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-1">
             {agent.displayName || profileUsername}
           </h1>
           {isChild && agent.parent ? (
             <a
-              href={`https://github.com/${agent.parent.githubUsername}/${agent.repoName}`}
+              href={`https://${agent.parent.provider || 'github.com'}/${agent.parent.githubUsername}/${agent.repoName}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-zinc-400 hover:text-white transition-colors"
@@ -165,12 +177,15 @@ export default function ProfilePage() {
             </a>
           ) : agent.githubUsername ? (
             <a
-              href={`https://github.com/${agent.githubUsername}`}
+              href={providerProfileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
             >
               @{agent.githubUsername}
+              <span className={`text-xs px-1.5 py-0.5 rounded ${isGitHub ? 'bg-purple-500/20 text-purple-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                {providerLabel}
+              </span>
             </a>
           ) : null}
           <p className="text-zinc-500 text-sm mt-2">
@@ -219,8 +234,8 @@ export default function ProfilePage() {
                 // Make images responsive + fix relative URLs to GitHub raw
                 img: ({ src, alt }) => {
                   let imageSrc = typeof src === 'string' ? src : ''
-                  // Convert relative paths to GitHub raw URLs
-                  if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+                  // Convert relative paths to raw URLs (GitHub only)
+                  if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:') && isGitHub) {
                     imageSrc = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imageSrc}`
                   }
                   return (
@@ -256,8 +271,8 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center text-zinc-500">
-          <p>No {isChild ? 'SOUL.md' : 'GitHub profile README'} found.</p>
-          {!isChild && (
+          <p>No {isChild ? 'SOUL.md' : 'profile README'} found.</p>
+          {!isChild && isGitHub && (
             <p className="text-sm mt-2">
               Create a repo named <span className="font-mono text-white">{agent.githubUsername}</span> with a README.md to show your soul here.
             </p>

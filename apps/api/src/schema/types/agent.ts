@@ -11,6 +11,7 @@ builder.objectType(AgentType, {
     id: t.exposeID('id'),
     walletAddress: t.exposeString('walletAddress', { nullable: true }),
     githubId: t.exposeInt('githubId', { nullable: true }),
+    provider: t.exposeString('provider', { nullable: true }),
     githubUsername: t.exposeString('githubUsername', { nullable: true }),
     githubAvatarUrl: t.exposeString('githubAvatarUrl', { nullable: true }),
     displayName: t.exposeString('displayName', { nullable: true }),

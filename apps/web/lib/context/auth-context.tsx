@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface Agent {
   id: string
   walletAddress?: string
+  provider?: string
   githubId?: number
   githubUsername?: string
   githubAvatarUrl?: string
