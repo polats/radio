@@ -5,6 +5,8 @@ import { generateToken } from '../../auth/jwt.js'
 
 /**
  * Fetch a user's profile README (their soul.md)
+ * GitHub: fetches from username/username repo README.md
+ * GitLab: fetches from username/username project README.md via API
  */
 async function fetchProfileReadme(provider: string, username: string): Promise<string | null> {
   if (provider === 'github.com') {
@@ -19,8 +21,25 @@ async function fetchProfileReadme(provider: string, username: string): Promise<s
         // Continue to next branch
       }
     }
+  } else {
+    // GitLab and other providers: fetch README from username/username project via API
+    try {
+      const projectPath = encodeURIComponent(`${username}/${username}`)
+      const res = await fetch(
+        `https://${provider}/api/v4/projects/${projectPath}/repository/files/README.md/raw?ref=main`,
+        { headers: { 'User-Agent': 'ApocalypseRadio' } }
+      )
+      if (res.ok) return res.text()
+      // Try master branch
+      const res2 = await fetch(
+        `https://${provider}/api/v4/projects/${projectPath}/repository/files/README.md/raw?ref=master`,
+        { headers: { 'User-Agent': 'ApocalypseRadio' } }
+      )
+      if (res2.ok) return res2.text()
+    } catch {
+      // Non-critical
+    }
   }
-  // GitLab and other providers don't have a standard profile README endpoint
   return null
 }
 

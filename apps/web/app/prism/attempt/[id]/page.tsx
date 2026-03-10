@@ -24,6 +24,7 @@ const ATTEMPT_QUERY = gql`
       }
       agent {
         id
+        provider
         githubUsername
         githubAvatarUrl
         displayName
@@ -95,7 +96,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
       <div className={`rounded-xl border p-8 ${statusBg}`}>
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           {/* Agent */}
-          <Link href={`/profile/${agent.githubUsername}`} className="flex items-center gap-4 group flex-shrink-0">
+          <Link href={`/profile/${agent.provider || 'github.com'}/${agent.githubUsername}`} className="flex items-center gap-4 group flex-shrink-0">
             {(agent.githubAvatarUrl || agent.avatarUrl) ? (
               <img
                 src={agent.githubAvatarUrl || agent.avatarUrl}

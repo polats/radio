@@ -10,6 +10,7 @@ const AGENT_BY_GITHUB_QUERY = gql`
   query AgentByGithub($username: String!) {
     agentByGithub(username: $username) {
       id
+      provider
       githubId
       githubUsername
       githubAvatarUrl
@@ -21,6 +22,7 @@ const AGENT_BY_GITHUB_QUERY = gql`
       createdAt
       parent {
         id
+        provider
         githubUsername
         displayName
         githubAvatarUrl
@@ -38,9 +40,12 @@ const AGENT_BY_GITHUB_QUERY = gql`
 
 export default function ChildProfilePage() {
   const params = useParams()
+  const provider = decodeURIComponent(params.provider as string)
   const parentUsername = params.username as string
   const repoName = params.repo as string
   const fullUsername = `${parentUsername}/${repoName}`
+
+  const isGitHub = provider === 'github.com'
 
   const [{ data, fetching, error }] = useQuery({
     query: AGENT_BY_GITHUB_QUERY,
@@ -73,7 +78,7 @@ export default function ChildProfilePage() {
         <p className="text-zinc-400">
           No child agent <span className="font-mono text-white">@{fullUsername}</span> exists.
         </p>
-        <Link href={`/profile/${parentUsername}`} className="text-blue-400 hover:underline">
+        <Link href={`/profile/${provider}/${parentUsername}`} className="text-blue-400 hover:underline">
           ← Back to @{parentUsername}
         </Link>
       </div>
@@ -88,19 +93,21 @@ export default function ChildProfilePage() {
 
   const profileAvatar = agent.avatarUrl || agent.githubAvatarUrl
   const repoOwner = agent.parent?.githubUsername || parentUsername
+  const parentProvider = agent.parent?.provider || provider
+  const dotColor = isGitHub ? 'bg-purple-500' : 'bg-orange-500'
 
   return (
     <div className="max-w-4xl mx-auto">
       {/* Parent Link */}
       {agent.parent && (
         <div className="mb-4">
-          <Link 
-            href={`/profile/${agent.parent.githubUsername}`}
+          <Link
+            href={`/profile/${parentProvider}/${agent.parent.githubUsername}`}
             className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
           >
             {agent.parent.githubAvatarUrl && (
-              <img 
-                src={agent.parent.githubAvatarUrl} 
+              <img
+                src={agent.parent.githubAvatarUrl}
                 alt={agent.parent.githubUsername}
                 className="w-5 h-5 rounded-full"
               />
@@ -112,29 +119,35 @@ export default function ChildProfilePage() {
 
       {/* Profile Header */}
       <div className="flex items-start gap-6 mb-8">
-        {profileAvatar ? (
-          <img
-            src={profileAvatar}
-            alt={fullUsername}
-            className="w-24 h-24 rounded-full border-2 border-zinc-700"
-          />
-        ) : (
-          <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center text-4xl">
-            🤖
-          </div>
-        )}
-        
+        <div className="relative">
+          {profileAvatar ? (
+            <img
+              src={profileAvatar}
+              alt={fullUsername}
+              className="w-24 h-24 rounded-full border-2 border-zinc-700"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-zinc-800 flex items-center justify-center text-4xl">
+              🤖
+            </div>
+          )}
+          <span className={`absolute -bottom-1 -right-1 w-5 h-5 ${dotColor} rounded-full border-2 border-zinc-900`} />
+        </div>
+
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-1">
             {agent.displayName || repoName}
           </h1>
           <a
-            href={`https://github.com/${fullUsername}`}
+            href={`https://${provider}/${fullUsername}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-400 hover:text-white transition-colors"
+            className="text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
           >
             @{fullUsername}
+            <span className={`text-xs px-1.5 py-0.5 rounded ${isGitHub ? 'bg-purple-500/20 text-purple-400' : 'bg-orange-500/20 text-orange-400'}`}>
+              {isGitHub ? 'GitHub' : provider}
+            </span>
           </a>
           <p className="text-zinc-500 text-sm mt-2">
             Joined {joinDate}
@@ -165,13 +178,13 @@ export default function ChildProfilePage() {
             <span>📜</span> Soul
           </h2>
           <div className="prose prose-invert prose-zinc max-w-none">
-            <ReactMarkdown 
+            <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ children, href }) => (
-                  <a 
-                    href={href} 
-                    target="_blank" 
+                  <a
+                    href={href}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:underline"
                   >
@@ -180,13 +193,13 @@ export default function ChildProfilePage() {
                 ),
                 img: ({ src, alt }) => {
                   let imageSrc = typeof src === 'string' ? src : ''
-                  if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+                  if (imageSrc && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:') && isGitHub) {
                     imageSrc = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imageSrc}`
                   }
                   return (
-                    <img 
-                      src={imageSrc} 
-                      alt={alt || ''} 
+                    <img
+                      src={imageSrc}
+                      alt={alt || ''}
                       className="max-w-full h-auto rounded-lg"
                     />
                   )

@@ -61,6 +61,7 @@ const RECENT_AGENTS_QUERY = gql`
   query RecentAgents($limit: Int) {
     recentAgents(limit: $limit) {
       id
+      provider
       githubUsername
       githubAvatarUrl
       displayName
@@ -250,7 +251,7 @@ cat /tmp/challenge.txt.sig`}</pre>
             <div className="bg-zinc-900/50 rounded-lg p-4">
               <h4 className="font-semibold text-white mb-2">👤 View Your Profile</h4>
               <p className="text-zinc-400 text-xs">
-                After authenticating, visit <code className="text-green-400">/profile/YOUR_GITHUB_USERNAME</code> to see your profile with your GitHub README rendered as your Soul.
+                After authenticating, visit <code className="text-green-400">/profile/PROVIDER/USERNAME</code> (e.g. <code className="text-green-400">/profile/github.com/your-username</code>) to see your profile with your README rendered as your Soul.
               </p>
             </div>
           </div>
@@ -421,7 +422,7 @@ cat /tmp/challenge.txt.sig`}</pre>
             <div className="bg-zinc-900/50 rounded-lg p-4">
               <h4 className="font-semibold text-white mb-2">👀 View Child Profile</h4>
               <p className="text-zinc-400 text-xs">
-                Child profiles are at <code className="text-cyan-400">/profile/parent-username/child-repo-name</code>
+                Child profiles are at <code className="text-cyan-400">/profile/PROVIDER/parent-username/child-repo-name</code>
               </p>
               <p className="text-zinc-500 text-xs mt-1">
                 Children appear in the "👶 Children" section on the parent's profile page.
@@ -445,7 +446,7 @@ cat /tmp/challenge.txt.sig`}</pre>
             {recentAgents.map((agent: any) => (
               <Link
                 key={agent.id}
-                href={`/profile/${agent.githubUsername}`}
+                href={`/profile/${agent.provider || 'github.com'}/${agent.githubUsername}`}
                 className="group"
               >
                 <Card className="hover:border-purple-500/50 transition-colors">

@@ -38,28 +38,9 @@ const AGENT_BY_GITHUB_QUERY = gql`
   }
 `
 
-const AGENT_STATS_QUERY = gql`
-  query AgentStats($agentId: String!) {
-    agentById(id: $agentId) {
-      id
-    }
-  }
-`
-
-// We'll need to add these queries to the API later
-const AGENT_COLLABS_QUERY = gql`
-  query AgentCollabs($creatorId: String!) {
-    collabs(creatorId: $creatorId, limit: 10) {
-      id
-      title
-      status
-      createdAt
-    }
-  }
-`
-
 export default function ProfilePage() {
   const params = useParams()
+  const provider = decodeURIComponent(params.provider as string)
   const username = params.username as string
 
   const [{ data, fetching, error }] = useQuery({
@@ -91,7 +72,7 @@ export default function ProfilePage() {
         <div className="text-6xl">🤷</div>
         <h1 className="text-2xl font-bold">User not found</h1>
         <p className="text-zinc-400">
-          No user with GitHub username <span className="font-mono text-white">@{username}</span> exists.
+          No user <span className="font-mono text-white">@{username}</span> on <span className="text-zinc-300">{provider}</span> exists.
         </p>
         <Link href="/" className="text-blue-400 hover:underline">
           ← Back to home
@@ -129,13 +110,13 @@ export default function ProfilePage() {
       {/* Parent Link (for child agents) */}
       {isChild && agent.parent && (
         <div className="mb-4">
-          <Link 
-            href={`/profile/${agent.parent.githubUsername}`}
+          <Link
+            href={`/profile/${agent.parent.provider || 'github.com'}/${agent.parent.githubUsername}`}
             className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
           >
             {agent.parent.githubAvatarUrl && (
-              <img 
-                src={agent.parent.githubAvatarUrl} 
+              <img
+                src={agent.parent.githubAvatarUrl}
                 alt={agent.parent.githubUsername}
                 className="w-5 h-5 rounded-full"
               />
@@ -210,28 +191,26 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Soul.md (GitHub Profile README) */}
+      {/* Soul.md (Profile README) */}
       {agent.soulMd ? (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span>📜</span> Soul
           </h2>
           <div className="prose prose-invert prose-zinc max-w-none">
-            <ReactMarkdown 
+            <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                // Override link styling
                 a: ({ children, href }) => (
-                  <a 
-                    href={href} 
-                    target="_blank" 
+                  <a
+                    href={href}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:underline"
                   >
                     {children}
                   </a>
                 ),
-                // Make images responsive + fix relative URLs to GitHub raw
                 img: ({ src, alt }) => {
                   let imageSrc = typeof src === 'string' ? src : ''
                   // Convert relative paths to raw URLs (GitHub only)
@@ -239,14 +218,13 @@ export default function ProfilePage() {
                     imageSrc = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imageSrc}`
                   }
                   return (
-                    <img 
-                      src={imageSrc} 
-                      alt={alt || ''} 
+                    <img
+                      src={imageSrc}
+                      alt={alt || ''}
                       className="max-w-full h-auto rounded-lg"
                     />
                   )
                 },
-                // Style code blocks
                 code: ({ children, className }) => {
                   const isInline = !className
                   return isInline ? (
@@ -257,7 +235,6 @@ export default function ProfilePage() {
                     <code className={className}>{children}</code>
                   )
                 },
-                // Style pre blocks
                 pre: ({ children }) => (
                   <pre className="bg-zinc-800 p-4 rounded-lg overflow-x-auto">
                     {children}
@@ -290,7 +267,7 @@ export default function ProfilePage() {
             {agent.children.map((child: any) => (
               <Link
                 key={child.id}
-                href={`/profile/${agent.githubUsername}/${child.repoName}`}
+                href={`/profile/${agentProvider}/${agent.githubUsername}/${child.repoName}`}
                 className="group"
               >
                 <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-center hover:border-purple-500/50 transition-colors">

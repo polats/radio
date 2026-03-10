@@ -204,7 +204,7 @@ export function ConnectButton() {
   if (agent) {
     const agentProvider = getProviderInfo(agent.provider)
     const hasProfile = !!agent.githubUsername
-    const profileUrl = hasProfile ? `/profile/${agent.githubUsername}` : undefined
+    const profileUrl = hasProfile ? `/profile/${agent.provider || 'github.com'}/${agent.githubUsername}` : undefined
     const externalUrl = hasProfile ? `https://${agent.provider || 'github.com'}/${agent.githubUsername}` : undefined
 
     return (
