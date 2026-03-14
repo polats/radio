@@ -1,0 +1,32 @@
+{
+  "name": "@radio/game",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^2.0.0",
+    "@colyseus/ws-transport": "^0.15.0",
+    "@radio/cli": "workspace:*",
+    "@radio/db": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "colyseus": "^0.15.0",
+    "dotenv": "^17.3.1",
+    "sshpk": "^1.18.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "@types/sshpk": "^1.17.4",
+    "colyseus.js": "^0.15.28",
+    "@mariozechner/pi-ai": "file:../../packages/pi-mono/packages/ai",
+    "@mariozechner/pi-agent-core": "file:../../packages/pi-mono/packages/agent",
+    "@mariozechner/pi-coding-agent": "file:../../packages/pi-mono/packages/coding-agent",
+    "openai": "^6.27.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}

@@ -5,3 +5,17 @@ dist
 .env
 *.log
 test-audio/
+
+# Agent test artifacts
+.agent-homes/
+*.db
+*.db-shm
+*.db-wal
+apps/game/cli-test-logs/
+
+# Temp files
+audio.wav
+auth_output.txt
+challenge.txt
+challenge.txt.sig*
+collab.json
